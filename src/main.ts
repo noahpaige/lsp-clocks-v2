@@ -1,5 +1,8 @@
-import { createApp } from 'vue'
-import './style.css'
-import App from './App.vue'
+import { createApp } from "vue";
+import "./assets/index.css";
+import App from "./App.vue";
 
-createApp(App).mount('#app')
+// TODO
+// start up redis client and listen to clock events
+
+createApp(App).mount("#app");
