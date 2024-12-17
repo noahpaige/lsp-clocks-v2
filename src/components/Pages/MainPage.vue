@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import Clock from "@/components/Clock.vue";
-import ClockT from "@/components/ClockT.vue";
-import ClockUTC from "@/components/ClockUTC.vue";
-import ClockHoldRemaining from "@/components/ClockHoldRemaining.vue";
+import Clock from "@/components/Clocks/Clock/Clock.vue";
+import ClockT from "@/components/Clocks/ClockT.vue";
+import ClockUTC from "@/components/Clocks/ClockUTC.vue";
+import ClockHoldRemaining from "@/components/Clocks/ClockHoldRemaining.vue";
 import { ref } from "vue";
 import { useIntervalFn } from "@vueuse/core";
 

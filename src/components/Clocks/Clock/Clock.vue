@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="flex align-middle w-full h-full justify-center items-center transition-all"
-  >
+  <div class="flex align-middle w-full h-full justify-center items-center transition-all">
     <div
       :data-size="props.size"
       :class="[
@@ -57,6 +55,24 @@
           {{ labelLeft }}
         </div>
         <div
+          v-if="timeArr[0][0] !== undefined"
+          :data-size="props.size"
+          :class="[
+            'flex flex-col items-center overflow-y-hidden leading-none',
+            'data-[size=xs]:h-[1rem] data-[size=xs]:leading-[1rem]     data-[size=xs]:mr-[0.75rem]',
+            'data-[size=sm]:h-[2rem] data-[size=sm]:leading-[2rem]     data-[size=sm]:mr-[1rem]',
+            'data-[size=md]:h-[3rem] data-[size=md]:leading-[3rem]     data-[size=md]:mr-[1.5rem]',
+            'data-[size=lg]:h-[5rem] data-[size=lg]:leading-[5rem]     data-[size=lg]:mr-[2rem]',
+            'data-[size=xl]:h-[8rem] data-[size=xl]:leading-[8rem]     data-[size=xl]:mr-[3rem]',
+            'data-[size=2xl]:h-[10rem] data-[size=2xl]:leading-[10rem] data-[size=2xl]:mr-[4rem]',
+          ]"
+        >
+          <div class="animate-flip-clock w-fit" v-for="(timeStr, index) in timeArr[0]" :key="`${index}-${timeStr}`">
+            {{ timeStr }}
+          </div>
+        </div>
+        <div
+          v-if="timeArr[1][0] !== undefined"
           :data-size="props.size"
           :class="[
             'flex flex-col items-center overflow-y-hidden leading-none',
@@ -68,15 +84,29 @@
             'data-[size=2xl]:h-[10rem] data-[size=2xl]:leading-[10rem]',
           ]"
         >
-          <div
-            class="animate-flip-clock w-fit"
-            v-for="(timeStr, index) in timeArr[0]"
-            :key="`${index}-${timeStr}`"
-          >
+          <div class="animate-flip-clock w-fit" v-for="(timeStr, index) in timeArr[1]" :key="`${index}-${timeStr}`">
             {{ timeStr }}
           </div>
         </div>
-        <div class="text-muted-foreground font-thin leading-none">:</div>
+        <div v-if="timeArr[1][0] !== undefined" class="text-muted-foreground font-thin leading-none">:</div>
+        <div
+          v-if="timeArr[2][0] !== undefined"
+          :data-size="props.size"
+          :class="[
+            'flex flex-col items-center overflow-y-hidden leading-none',
+            'data-[size=xs]:h-[1rem] data-[size=xs]:leading-[1rem]',
+            'data-[size=sm]:h-[2rem] data-[size=sm]:leading-[2rem]',
+            'data-[size=md]:h-[3rem] data-[size=md]:leading-[3rem]',
+            'data-[size=lg]:h-[5rem] data-[size=lg]:leading-[5rem]',
+            'data-[size=xl]:h-[8rem] data-[size=xl]:leading-[8rem]',
+            'data-[size=2xl]:h-[10rem] data-[size=2xl]:leading-[10rem]',
+          ]"
+        >
+          <div class="animate-flip-clock w-fit" v-for="(timeStr, index) in timeArr[2]" :key="`${index}-${timeStr}`">
+            {{ timeStr }}
+          </div>
+        </div>
+        <div v-if="timeArr[2][0] !== undefined" class="text-muted-foreground font-thin leading-none">:</div>
         <div
           :data-size="props.size"
           :class="[
@@ -89,32 +119,7 @@
             'data-[size=2xl]:h-[10rem] data-[size=2xl]:leading-[10rem]',
           ]"
         >
-          <div
-            class="animate-flip-clock w-fit"
-            v-for="(timeStr, index) in timeArr[1]"
-            :key="`${index}-${timeStr}`"
-          >
-            {{ timeStr }}
-          </div>
-        </div>
-        <div class="text-muted-foreground font-thin leading-none">:</div>
-        <div
-          :data-size="props.size"
-          :class="[
-            'flex flex-col items-center overflow-y-hidden leading-none',
-            'data-[size=xs]:h-[1rem] data-[size=xs]:leading-[1rem]',
-            'data-[size=sm]:h-[2rem] data-[size=sm]:leading-[2rem]',
-            'data-[size=md]:h-[3rem] data-[size=md]:leading-[3rem]',
-            'data-[size=lg]:h-[5rem] data-[size=lg]:leading-[5rem]',
-            'data-[size=xl]:h-[8rem] data-[size=xl]:leading-[8rem]',
-            'data-[size=2xl]:h-[10rem] data-[size=2xl]:leading-[10rem]',
-          ]"
-        >
-          <div
-            class="animate-flip-clock w-fit"
-            v-for="(timeStr, index) in timeArr[2]"
-            :key="`${index}-${timeStr}`"
-          >
+          <div class="animate-flip-clock w-fit" v-for="(timeStr, index) in timeArr[3]" :key="`${index}-${timeStr}`">
             {{ timeStr }}
           </div>
         </div>
@@ -141,6 +146,7 @@
 <script setup>
 import { cn } from "@/lib/utils";
 import { ref, watch } from "vue";
+import { timeToArr } from "./utils";
 
 const props = defineProps({
   labelLeft: {
@@ -164,10 +170,21 @@ const props = defineProps({
     default: "md",
     validator: (value) => ["sm", "md", "lg", "xl", "2xl"].includes(value),
   },
+  format: {
+    type: String,
+    default: "HHMMSS",
+    validator: (value) => ["DDHHMMSS", "HHMMSS", "MMSS", "SS"].includes(value),
+  },
+  timeType: {
+    type: String,
+    default: "date",
+    validator: (value) => ["date", "timespan"].includes(value),
+  },
 });
 
 // Define your clock data and functionality here
 const timeArr = ref([
+  ["000", "000"],
   ["00", "00"],
   ["00", "00"],
   ["00", "00"],
@@ -180,25 +197,18 @@ watch(
   }
 );
 
-// Define your clock methods here
 function updateClock() {
-  const currentTime = new Date(props.time);
-  const timeStrs = [
-    currentTime.getHours().toString().padStart(2, "0"),
-    currentTime.getMinutes().toString().padStart(2, "0"),
-    currentTime.getSeconds().toString().padStart(2, "0"),
-  ];
+  let timeStrs = timeToArr(props.time, props.timeType, props.format);
 
-  function updateTime(index) {
-    if (timeArr.value[index][0] !== timeStrs[index]) {
-      timeArr.value[index].unshift(timeStrs[index]);
-      timeArr.value[index].pop();
+  const didChange = timeStrs.reduce((didChange, timeStr, i) => {
+    return didChange || (timeStr !== undefined && timeStr !== timeArr.value[0][i]);
+  }, false);
+  if (didChange) {
+    for (let i = 0; i < timeStrs.length; i++) {
+      timeArr.value[i].unshift(timeStrs[i]);
+      timeArr.value[i].pop();
     }
   }
-
-  updateTime(0);
-  updateTime(1);
-  updateTime(2);
 }
 
 // Call the updateClock method at regular intervals

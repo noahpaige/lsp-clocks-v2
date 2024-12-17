@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Clock from "@/components/Clock.vue";
+import Clock from "@/components/Clocks/Clock/Clock.vue";
 
 const props = defineProps({
   time: {
@@ -14,5 +14,5 @@ const props = defineProps({
 </script>
 
 <template>
-  <Clock labelLeft="T-" :time="props.time" :size="props.size" />
+  <Clock labelLeft="L-" :time="props.time" :size="props.size" />
 </template>
