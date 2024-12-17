@@ -1,5 +1,21 @@
 # Vue 3 + TypeScript + Vite
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+A new version of LSP Clocks with some new packages!
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+here's a list of the major packages/libraries that we're using:
+ - **Vue 3** - the latest and greatest vue
+ - **Vite** - A package bundler and development server 
+ - **shacn-vue** - the Vue version of the popular React component library. Built using the radix-vue library. 
+ - **tailwind** - predefined css classes
+
+
+# Getting Started
+1. Make sure your node version is up to date. the latest as of writing is v22.12.0
+2. Clone the repo
+   -  [clone with HTTPS](https://github.com/noahpaige/lsp-clocks-v2.git) https://github.com/noahpaige/lsp-clocks-v2.git
+   -  clone with git CLI -> ``` gh repo clone noahpaige/lsp-clocks-v2 ```
+3. run ```npm install``` to install all required packages
+4. run ```npm run dev``` to start the development server
+5. open http://localhost:5173/ to view the app running locally
+
+   
