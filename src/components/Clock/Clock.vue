@@ -3,7 +3,7 @@
     <div
       :data-size="props.size"
       :class="[
-        'flex flex-col bg-slate-900 rounded-lg',
+        'flex flex-col bg-slate-800/[0.4] backdrop-blur-lg rounded-lg',
         'data-[size=xs]:text-[1rem]   data-[size=xs]:p-2',
         'data-[size=sm]:text-[2rem]   data-[size=sm]:p-3',
         'data-[size=md]:text-[3rem]   data-[size=md]:p-4',
