@@ -1,42 +1,59 @@
 <script setup lang="ts">
-import ClockT from "@/components/Clocks/ClockT.vue";
-import ClockUTC from "@/components/Clocks/ClockUTC.vue";
-import ClockLocal from "../Clocks/ClockLocal.vue";
-import ClockHoldRemaining from "@/components/Clocks/ClockHoldRemaining.vue";
+import Clock from "@/components/Clock/Clock.vue";
+import { data } from "../../lib/clockdata";
 import { ref } from "vue";
 import { useIntervalFn } from "@vueuse/core";
 
-const date = new Date();
-const times = ref([date.getTime() + date.getTimezoneOffset() * 60 * 1000, Date.now(), 1234567890]);
-
-const timezoneStr = ref(new Date().toLocaleString("en-US", { timeZoneName: "short" }).split(" ")[3]);
+const clockData = ref(data);
 
 useIntervalFn(() => {
-  times.value[0] += 1000;
-  times.value[1] += 1000;
-  times.value[2] -= 1000;
+  clockData.value.utc += 1000;
+  clockData.value.local += 1000;
+  clockData.value.t += 1000;
+  clockData.value.l += 1000;
+  clockData.value.met += 1000;
 }, 1000);
 </script>
 
 <template>
-  <div class="w-screen h-screen flex flex-row flex-wrap gap-5 p-5 justify-center items-center">
-    <div class="w-fit h-fit">
-      <ClockUTC :time="times[0]" size="xl" />
-    </div>
-    <div class="w-fit h-fit">
-      <ClockLocal :labelRight="timezoneStr" :time="times[1]" size="xl" />
-    </div>
-    <div class="w-fit h-fit">
-      <ClockT :time="times[2]" size="xl" />
-    </div>
-    <div class="w-fit h-fit">
-      <ClockHoldRemaining :time="202222222" size="lg" />
-    </div>
-    <div class="w-fit h-fit">
-      <ClockHoldRemaining :time="202222222" size="lg" />
+  <div class="w-screen h-screen flex p-5 justify-center items-center">
+    <div class="w-screen h-fit flex flex-row flex-wrap gap-8 justify-center items-center">
+      <div class="w-fit h-fit">
+        <Clock labelRight="UTC" :time="clockData.utc" size="2xl" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :labelRight="clockData.timezoneStr" :time="clockData.local" size="2xl" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :labelLeft="clockData.t > 0 ? 'T+' : 'T-'" :time="clockData.t" timeType="timespan" size="xl" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :labelLeft="clockData.l > 0 ? 'L+' : 'L-'" :time="clockData.l" timeType="timespan" size="xl" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.tZero" labelTop="T-Zero" labelRight="UTC" timeType="date" format="DDHHMMSS" size="xl" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.holdRemaining" labelTop="Hold Remaining" timeType="timespan" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.untilRestart" labelTop="Time Until Restart" timeType="timespan" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.windowRemaining" labelTop="Window Remaining" timeType="timespan" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.windowUsed" labelTop="Window Used" timeType="timespan" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.met" labelLeft="MET" timeType="timespan" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.met" labelLeft="MET" timeType="timespan" format="MMSS" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.met" labelLeft="MET" timeType="timespan" format="SS" size="lg" />
+      </div>
     </div>
   </div>
 </template>
-
-ttime ltime tuime until restart window remaining window used shed hold remaining ====plus ==== utc met (HHMMSS) met
-(MMSS) met (SS) Tzero (DDHHMMSS)

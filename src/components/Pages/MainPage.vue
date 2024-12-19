@@ -1,69 +1,59 @@
 <script setup lang="ts">
-import Clock from "@/components/Clocks/Clock/Clock.vue";
-import ClockT from "@/components/Clocks/ClockT.vue";
-import ClockUTC from "@/components/Clocks/ClockUTC.vue";
-import ClockHoldRemaining from "@/components/Clocks/ClockHoldRemaining.vue";
+import Clock from "@/components/Clock/Clock.vue";
+import { data } from "../../lib/clockdata";
 import { ref } from "vue";
 import { useIntervalFn } from "@vueuse/core";
 
-//TODO TIMESPAN https://github.com/indexzero/TimeSpan.js
-
-const times = ref([
-  123456789, 1234567890, 12345678900, 123456789000, 1234567890000,
-  12345678900000,
-]);
+const clockData = ref(data);
 
 useIntervalFn(() => {
-  times.value = times.value.map((time) => (time += 1000));
+  clockData.value.utc += 1000;
+  clockData.value.local += 1000;
+  clockData.value.t += 1000;
+  clockData.value.l += 1000;
+  clockData.value.met += 1000;
 }, 1000);
 </script>
 
 <template>
-  <div class="w-screen flex flex-col gap-5 p-5 justify-center items-center">
-    <ClockUTC :time="times[0]" size="lg" />
-    <ClockT :time="times[0]" size="lg" />
-    <ClockHoldRemaining :time="202222222" size="lg" />
-    <Clock
-      labelLeft="left"
-      labelRight="right"
-      labelTop="XS Hold Remaining"
-      :time="times[0]"
-      size="xs"
-    />
-    <Clock
-      labelLeft="left"
-      labelRight="right"
-      labelTop="SM Hold Remaining"
-      :time="times[1]"
-      size="sm"
-    />
-    <Clock
-      labelLeft="left"
-      labelRight="right"
-      labelTop="MD Hold Remaining"
-      :time="times[2]"
-      size="md"
-    />
-    <Clock
-      labelLeft="left"
-      labelRight="right"
-      labelTop="LG Hold Remaining"
-      :time="times[3]"
-      size="lg"
-    />
-    <Clock
-      labelLeft="left"
-      labelRight="right"
-      labelTop="XL Hold Remaining"
-      :time="times[4]"
-      size="xl"
-    />
-    <Clock
-      labelLeft="left"
-      labelRight="right"
-      labelTop="2XL Hold Remaining"
-      :time="times[5]"
-      size="2xl"
-    />
+  <div class="w-screen h-screen flex p-5 justify-center items-center">
+    <div class="w-screen h-fit flex flex-row flex-wrap gap-8 justify-center items-center">
+      <div class="w-fit h-fit">
+        <Clock labelRight="UTC" :time="clockData.utc" size="2xl" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :labelRight="clockData.timezoneStr" :time="clockData.local" size="2xl" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :labelLeft="clockData.t > 0 ? 'T+' : 'T-'" :time="clockData.t" timeType="timespan" size="xl" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :labelLeft="clockData.l > 0 ? 'L+' : 'L-'" :time="clockData.l" timeType="timespan" size="xl" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.tZero" labelTop="T-Zero" labelRight="UTC" timeType="date" format="DDHHMMSS" size="xl" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.holdRemaining" labelTop="Hold Remaining" timeType="timespan" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.untilRestart" labelTop="Time Until Restart" timeType="timespan" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.windowRemaining" labelTop="Window Remaining" timeType="timespan" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.windowUsed" labelTop="Window Used" timeType="timespan" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.met" labelLeft="MET" timeType="timespan" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.met" labelLeft="MET" timeType="timespan" format="MMSS" size="lg" />
+      </div>
+      <div class="w-fit h-fit">
+        <Clock :time="clockData.met" labelLeft="MET" timeType="timespan" format="SS" size="lg" />
+      </div>
+    </div>
   </div>
 </template>

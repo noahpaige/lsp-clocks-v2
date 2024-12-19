@@ -17,7 +17,7 @@ export function timeToArr(time: number, timeType: TimeType, timeFormat: TimeForm
 }
 
 function spanToDDHHMMSS(spanMS: number): (string | undefined)[] {
-  const ts = TimeSpan.fromMilliseconds(spanMS);
+  const ts = TimeSpan.fromMilliseconds(Math.abs(spanMS));
   return [
     ts.days.toString(),
     ts.hours.toString().padStart(2, "0"),
@@ -27,7 +27,7 @@ function spanToDDHHMMSS(spanMS: number): (string | undefined)[] {
 }
 
 function spanToHHMMSS(spanMS: number): (string | undefined)[] {
-  const ts = TimeSpan.fromMilliseconds(spanMS);
+  const ts = TimeSpan.fromMilliseconds(Math.abs(spanMS));
   const hours = ts.hours + ts.days * 24;
   return [
     undefined,
@@ -38,13 +38,13 @@ function spanToHHMMSS(spanMS: number): (string | undefined)[] {
 }
 
 function spanToMMSS(spanMS: number): (string | undefined)[] {
-  const ts = TimeSpan.fromMilliseconds(spanMS);
+  const ts = TimeSpan.fromMilliseconds(Math.abs(spanMS));
   const minutes = ts.minutes + ts.hours * 60 + ts.days * 24;
   return [undefined, undefined, minutes.toString().padStart(2, "0"), ts.seconds.toString().padStart(2, "0")];
 }
 
 function spanToSS(spanMS: number): (string | undefined)[] {
-  const ts = TimeSpan.fromMilliseconds(spanMS);
+  const ts = TimeSpan.fromMilliseconds(Math.abs(spanMS));
   return [undefined, undefined, undefined, ts.totalSeconds.toString().padStart(2, "0")];
 }
 
