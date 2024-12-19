@@ -1,5 +1,5 @@
 <template>
-  <div class="flex align-middle w-full h-full justify-center items-center transition-all">
+  <div class="flex align-middle w-fit h-fit justify-center items-center transition-all">
     <div
       :data-size="props.size"
       :class="[
