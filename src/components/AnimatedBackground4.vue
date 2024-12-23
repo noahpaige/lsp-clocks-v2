@@ -70,7 +70,7 @@ for (let i = 0; i < n; i++) {
 </script>
 
 <template>
-    <svg preserveAspectRatio="xMidYMid slice" viewBox="0 0 100 100" class="w-full h-full -z-20 blur-md">
+    <svg preserveAspectRatio="xMidYMid slice" viewBox="0 0 100 100" class="w-full h-full -z-20 blur-xl">
         <defs>
             <linearGradient v-for="(item, index) in l" :key="'gradient' + index" :id="'gradient' + index" x1="0" x2="1"
                 y1="1" y2="0">
