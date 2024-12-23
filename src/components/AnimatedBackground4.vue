@@ -6,12 +6,12 @@ type hslColor = {
     l: number
 }
 
+// Interpolate a single value
+const interpolate = (a: number, b: number, factor: number) => a + factor * (b - a);
+
 function interpolateHSL(color1: hslColor, color2: hslColor, hFactor: number, sFactor: number, lFactor: number) {
     // Ensure hue stays within 0-360 range
     const normalizeHue = (hue: number) => (hue + 360) % 360;
-
-    // Interpolate a single value
-    const interpolate = (a: number, b: number, factor: number) => a + factor * (b - a);
 
     // Interpolate hue, handling the circular nature
     let h = interpolate(color1.h, color2.h, hFactor);
@@ -46,7 +46,8 @@ const c2 = { h: 242.2, s: 84, l: 4.9 }; //{ h: 248, s: 65, l: 54 };
 const l = [];
 const n = 8;
 const gap = 0.75;
-const shapeSize = 4;
+const shapeMin = 0.5;
+const shapeMax = 3;
 for (let i = 0; i < n; i++) {
     const hFactor = i / n * (1 - gap);
     const sFactor = i / n;
@@ -58,7 +59,7 @@ for (let i = 0; i < n; i++) {
                 hslToString(interpolateHSL(c1, c2, hFactor, sFactor, lFactor)),
                 hslToString(interpolateHSL(c1, c2, hFactor + gap, sFactor, lFactor - gap)),
             ],
-            groupStyle: `transform: rotate(${Math.floor(Math.random() * 360)}deg) scale(${shapeSize - (i / n) * (shapeSize - 0.5)});`,
+            groupStyle: `transform: rotate(${Math.floor(Math.random() * 360)}deg) scale(${interpolate(shapeMax, shapeMin, sFactor)}); translateZ: 0;`,
             animDuration: 20 + Math.random() * 20 + 's'
 
         }
@@ -69,7 +70,7 @@ for (let i = 0; i < n; i++) {
 </script>
 
 <template>
-    <svg preserveAspectRatio="xMidYMid slice" viewBox="0 0 100 100" class="w-full h-full -z-20 blur-lg">
+    <svg preserveAspectRatio="xMidYMid slice" viewBox="0 0 100 100" class="w-full h-full -z-20 blur-md">
         <defs>
             <linearGradient v-for="(item, index) in l" :key="'gradient' + index" :id="'gradient' + index" x1="0" x2="1"
                 y1="1" y2="0">
@@ -77,14 +78,12 @@ for (let i = 0; i < n; i++) {
                 <stop id="stop2" :stop-color="item.colors[1]" offset="100%"></stop>
             </linearGradient>
         </defs>
-        <g v-for="(item, index) in l" :key="'path' + index" :style="item.groupStyle">
-            <path :fill="`url(#${'gradient' + index})`" class="animate-spin"
+        <g v-for="(item, index) in l" :key="'path' + index" :style="item.groupStyle" class="transform-gpu">
+            <path :fill="`url(#${'gradient' + index})`" class="animate-spin transform-gpu"
                 :style="`animation-duration: ${item.animDuration}`" :d="item.path" width="100%" height="100%"
-                :stroke="`url(#${'gradient' + index})`">
+                :stroke="`url(#gradient${index})`">
             </path>
         </g>
-
-
     </svg>
 </template>
 

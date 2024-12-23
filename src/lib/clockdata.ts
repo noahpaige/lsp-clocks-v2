@@ -11,5 +11,5 @@ export const data = {
   windowUsed: 0,
   windowRemaining: 1000 * 60 * 60 * 4,
   tZero: date.getTime() + date.getTimezoneOffset() * 60 * 1000 - 1000 * 60 * 60 * 14,
-  met: 0,
+  met: 95001,
 };
