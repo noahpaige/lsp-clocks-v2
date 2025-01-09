@@ -1,6 +1,6 @@
-import ClocksDemoPage from "@/components/Pages/ClocksDemoPage.vue";
 import HomePage from "@/components/Pages/HomePage.vue";
 import OpconPage from "@/components/Pages/OpconPage.vue";
+import ClocksDemoPage from "@/components/Pages/ClocksDemoPage.vue";
 
 const routes = [
   {
