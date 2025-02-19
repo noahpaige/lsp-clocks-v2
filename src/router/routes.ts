@@ -1,5 +1,4 @@
 import HomePage from "@/components/Pages/HomePage.vue";
-import OpconPage from "@/components/Pages/OpconPage.vue";
 import ClocksDemoPage from "@/components/Pages/ClocksDemoPage.vue";
 
 const routes = [
@@ -7,11 +6,6 @@ const routes = [
     path: "/",
     name: "Home",
     component: HomePage,
-  },
-  {
-    path: "/opcon",
-    name: "Opcon",
-    component: OpconPage,
   },
   {
     path: "/clocks-demo",
