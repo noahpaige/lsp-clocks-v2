@@ -11,7 +11,8 @@
   "dependencies": {
     "@radix-icons/vue": "^1.0.0",
     "@tanstack/vue-table": "^8.20.5",
-    "@vueuse/core": "^12.0.0",
+    "@vueuse/core": "^12.7.0",
+    "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "embla-carousel-vue": "^8.5.1",
