@@ -1,6 +1,7 @@
 import { createApp } from "vue";
 import "./assets/index.css";
 import App from "./App.vue";
+import router from "./router/router";
 // import { createClient } from "redis";
 
 // const port = 6879;
@@ -15,4 +16,6 @@ import App from "./App.vue";
 // TODO
 // start up redis client and listen to clock events
 
-createApp(App).mount("#app");
+const app = createApp(App);
+app.use(router);
+app.mount("#app");

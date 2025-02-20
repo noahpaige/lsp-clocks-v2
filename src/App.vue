@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import ClocksDemoPage from "./components/Pages/ClocksDemoPage.vue";
 import { useColorMode } from "@vueuse/core";
+import { useRoute } from "vue-router";
+import routes from "./router/routes";
+
+const route = useRoute();
 
 // need this to enable dark mode
 const mode = useColorMode();
 </script>
 
 <template>
-  <ClocksDemoPage />
+  <router-view></router-view>
 </template>

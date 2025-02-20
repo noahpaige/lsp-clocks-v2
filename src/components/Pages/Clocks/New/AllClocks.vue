@@ -4,7 +4,7 @@ import AnimatedBackground from "@/components/AnimatedBackground.vue";
 import AnimatedBackground2 from "@/components/AnimatedBackground2.vue";
 import AnimatedBackground3 from "@/components/AnimatedBackground3.vue";
 import AnimatedBackground4 from "@/components/AnimatedBackground4.vue";
-import { data } from "../../lib/clockdata";
+import { data } from "../../../../lib/clockdata";
 import { ref } from "vue";
 import { useIntervalFn } from "@vueuse/core";
 
@@ -35,8 +35,14 @@ useIntervalFn(() => {
               <Clock :labelLeft="clockData.l > 0 ? 'L+' : 'L-'" :time="clockData.l" timeType="timespan" size="xl" />
             </div>
             <div class="flex flex-row gap-8 justify-center items-center">
-              <Clock :time="clockData.tZero" labelTop="T-Zero" labelRight="UTC" timeType="date" format="DDHHMMSS"
-                size="xl" />
+              <Clock
+                :time="clockData.tZero"
+                labelTop="T-Zero"
+                labelRight="UTC"
+                timeType="date"
+                format="DDHHMMSS"
+                size="xl"
+              />
             </div>
             <div class="grid grid-cols-4 gap-8 justify-center items-center">
               <Clock :time="clockData.holdRemaining" labelTop="Hold Remaining" timeType="timespan" size="lg" />
