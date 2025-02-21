@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { useColorMode } from "@vueuse/core";
 import { useRoute } from "vue-router";
-import routes from "./router/routes";
+import { Toaster } from "@/components/ui/sonner";
+import notificationManager from "@/logic/NotificationManager";
+import { onUnmounted } from "vue";
 
-const route = useRoute();
+const notificationMan = new notificationManager();
 
 // need this to enable dark mode
 const mode = useColorMode();
+
+onUnmounted(() => {
+  notificationMan.onUnmounted();
+});
 </script>
 
 <template>
+  <Toaster closeButton />
   <router-view></router-view>
 </template>

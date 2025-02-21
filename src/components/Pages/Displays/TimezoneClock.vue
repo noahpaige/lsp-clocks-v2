@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import Clock from "@/components/Clock/Clock.vue";
-import AnimatedBackground from "@/components/AnimatedBackground.vue";
-import AnimatedBackground2 from "@/components/AnimatedBackground2.vue";
-import AnimatedBackground3 from "@/components/AnimatedBackground3.vue";
 import AnimatedBackground4 from "@/components/AnimatedBackground4.vue";
-import { data } from "../../../../lib/clockdata";
+import { data } from "@/lib/clockdata";
 import { ref } from "vue";
 import { useIntervalFn } from "@vueuse/core";
 

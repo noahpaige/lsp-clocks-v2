@@ -1,7 +1,7 @@
-import HomePage from "@/components/Pages/HomePage.vue";
-import ClocksDemoPage from "@/components/Pages/Clocks/New/ClocksDemoPage.vue";
-import AllClocks from "@/components/Pages/Clocks/New/AllClocks.vue";
-import TimezoneClock from "@/components/Pages/Clocks/New/TimezoneClock.vue";
+import HomePage from "@/components/Pages/HomePage/HomePage.vue";
+import ClocksDemoPage from "@/components/Pages/Displays/ClocksDemoPage.vue";
+import AllClocks from "@/components/Pages/Displays/AllClocks.vue";
+import TimezoneClock from "@/components/Pages/Displays/TimezoneClock.vue";
 
 const routes = [
   {
@@ -10,17 +10,17 @@ const routes = [
     component: HomePage,
   },
   {
-    path: "/clocks-demo",
+    path: "/displays/clocks-demo",
     name: "Clocks Demo",
     component: ClocksDemoPage,
   },
   {
-    path: "/all-clocks-new",
+    path: "/displays/all-clocks-new",
     name: "All Clocks",
     component: AllClocks,
   },
   {
-    path: "/timezone-clocks-new",
+    path: "/displays/timezone-clocks-new",
     name: "Timezone Clocks",
     component: TimezoneClock,
   },
