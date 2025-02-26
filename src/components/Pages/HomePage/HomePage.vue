@@ -7,19 +7,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Settings, Clock } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
+import { openWindow } from "@composables/useWindowManager";
 import TopNav from "./TopNav.vue";
 
 const router = useRouter();
 
 // Table data
 const tableData = ref([
-  { name: "All Clocks", route: "displays/all-clocks-new" },
-  { name: "Timezone Clocks", route: "displays/timezone-clocks-new" },
+  { name: "All Clocks", route: "/displays/all-clocks-new" },
+  { name: "Timezone Clocks", route: "/displays/timezone-clocks-new" },
   { name: "Clock GHI", route: "/displays/clocks-demo" },
-  { name: "Clock JKL", route: "displays/clocks-demo" },
-  { name: "Clock MNO", route: "displays/clocks-demo" },
-  { name: "Clock PQR", route: "displays/clocks-demo" },
-  { name: "Clock STU", route: "displays/clocks-demo" },
+  { name: "Clock JKL", route: "/displays/clocks-demo" },
+  { name: "Clock MNO", route: "/displays/clocks-demo" },
+  { name: "Clock PQR", route: "/displays/clocks-demo" },
+  { name: "Clock STU", route: "/displays/clocks-demo" },
 ]);
 
 // Search functionality (basic example)
@@ -30,7 +31,7 @@ const filteredData = computed(() => {
 
 const launchClockWindow = (route) => {
   const url = router.resolve(route).href;
-  window.open(url, "newwindow", "width=800,height=600,noopener,noreferrer");
+  openWindow(url);
 };
 </script>
 
