@@ -3,12 +3,21 @@ import NotificationBus from "@/utils/NotificationBus";
 import { toast } from "vue-sonner";
 
 export default class NotificationManager {
-  constructor() {
+  private static instance: NotificationManager;
+
+  private constructor() {
     NotificationBus.on("notify", this.handleNotification.bind(this));
     NotificationBus.on("clear", this.handleClear);
   }
 
-  /** call this in the onUnmounted hook of the same component that you instantiate this instance in. */
+  public static getInstance(): NotificationManager {
+    if (!NotificationManager.instance) {
+      NotificationManager.instance = new NotificationManager();
+    }
+    return NotificationManager.instance;
+  }
+
+  /** Call this in the onUnmounted hook to clean up event listeners. */
   public onUnmounted() {
     NotificationBus.off("notify", this.handleNotification.bind(this));
     NotificationBus.off("clear", this.handleClear.bind(this));
