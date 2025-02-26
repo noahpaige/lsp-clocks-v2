@@ -3,6 +3,7 @@ import vue from "@vitejs/plugin-vue";
 import autoprefixer from "autoprefixer";
 import tailwind from "tailwindcss";
 import { defineConfig } from "vite";
+import path from "node:path";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -14,7 +15,8 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "@": path.resolve(__dirname, "src"), // Define "@" as an alias for "src"
     },
   },
 });

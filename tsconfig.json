@@ -7,7 +7,9 @@
     "paths": {
       "@/*": ["./src/*"],
       "@/components/*": ["./src/components/*"],
-      "@/lib/utils/*": ["./src/lib/utils/*"]
+      "@/lib/utils/*": ["./src/lib/utils/*"],
+      "@/logic/*": ["./src/logic/*"],
+      "@/composables/*": ["./src/composables/*"]
     }
   }
 }
