@@ -1,17 +1,12 @@
 <script setup lang="ts">
 import { useColorMode } from "@vueuse/core";
 import { Toaster } from "@/components/ui/sonner";
-import NotificationManager from "@/logic/NotificationManager";
-import { onUnmounted } from "vue";
-
-const notificationMan = NotificationManager.getInstance();
-
+import { useToaster } from "@/composables/useToaster";
+import { useWindowManager } from "@/composables/useWindowmanager";
 // need this to enable dark mode
 const mode = useColorMode();
-
-onUnmounted(() => {
-  notificationMan.onUnmounted();
-});
+const toaster = useToaster();
+const windowMan = useWindowManager();
 </script>
 
 <template>

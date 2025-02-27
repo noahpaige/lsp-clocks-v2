@@ -5,13 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Settings, Clock } from "lucide-vue-next";
-import NotificationBus from "@/utils/NotificationBus";
+import { useToaster } from "@/composables/useToaster";
+
+const { emitToast } = useToaster();
 
 const onClickSettings = () => {
-  NotificationBus.emit("notify", {
-    title: "Settings clicked!",
-    message: "TODO handle settings",
-    severity: "success",
+  emitToast({
+    title: "Settings Clicked!",
+    type: "info",
+    deliverTo: "all",
   });
 };
 </script>

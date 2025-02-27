@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Settings, Clock } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
-import { openWindow } from "@composables/useWindowManager";
+import { useWindowManager } from "@/composables/useWindowManager";
 import TopNav from "./TopNav.vue";
 
 const router = useRouter();
+const { openWindow } = useWindowManager();
 
 // Table data
 const tableData = ref([
