@@ -1,6 +1,6 @@
 import { onUnmounted } from "vue";
-import { SyncBus } from "@/logic/SyncBus/SyncBus";
-import { Events } from "@/logic/SyncBus/Events";
+import { SyncBus } from "@/logic/SyncBus";
+import { Events } from "@/types/Events";
 
 export function useSyncBus() {
   const subscriber = Symbol("syncBusSubscriber"); // ✅ Unique reference for each component
@@ -9,7 +9,7 @@ export function useSyncBus() {
    * Subscribe to a SyncBus event with type safety and automatic cleanup.
    */
   function onBusEvent<K extends keyof Events>(event: K, handler: (payload: Events[K]) => void) {
-    SyncBus.on(subscriber, event, handler);
+    SyncBus.on({ subscriber }, event, handler);
   }
 
   /**
@@ -24,7 +24,7 @@ export function useSyncBus() {
    */
   onUnmounted(() => {
     for (const key of Object.keys(SyncBus)) {
-      SyncBus.off(subscriber, key as keyof Events);
+      SyncBus.off({ subscriber }, key as keyof Events);
     }
   });
 
