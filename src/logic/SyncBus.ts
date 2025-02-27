@@ -18,7 +18,7 @@
 
 import mitt, { Emitter } from "mitt";
 import { BroadcastChannel } from "broadcast-channel";
-import { Events } from "./Events";
+import { Events } from "@/types/Events";
 
 class SyncBusProxy<T extends Record<string, any>> {
   // Ensures T is an object

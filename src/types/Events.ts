@@ -8,6 +8,12 @@ export type Events = {
   userLoggedIn: { id: number; name: string };
   userLoggedOut: undefined;
   messageReceived: { sender: string; content: string };
+  toast: {
+    title: string;
+    options: Record<string, unknown>;
+    type?: "success" | "info" | "warning" | "error"; // defaults to info
+    deliverTo?: "displays" | "home" | "all"; // defaults to home
+  };
 };
 
 /*
