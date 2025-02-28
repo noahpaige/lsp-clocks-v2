@@ -72,7 +72,11 @@ const closeDisplay = (item) => {
                 >
               </TableCell>
               <TableCell class="flex gap-2">
-                <Button class="w-20 transition-all duration-300" @click="launchDisplay(item)">
+                <Button
+                  class="w-20 transition-all duration-300"
+                  :variant="item.status === 'closed' ? 'default' : 'secondary'"
+                  @click="launchDisplay(item)"
+                >
                   {{ item.status === "closed" ? "Launch" : "Focus" }}
                 </Button>
                 <Button
