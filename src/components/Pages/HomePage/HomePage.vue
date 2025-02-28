@@ -65,13 +65,22 @@ const closeDisplay = (item) => {
             <TableRow v-for="item in filteredData" :key="item.id">
               <TableCell>{{ item.name }}</TableCell>
               <TableCell
-                ><Badge :variant="item.status === 'open' ? 'default' : 'destructive'">{{ item.status }}</Badge>
+                ><Badge
+                  class="transition-all duration-300"
+                  :variant="item.status === 'open' ? 'default' : 'destructive'"
+                  >{{ item.status }}</Badge
+                >
               </TableCell>
               <TableCell class="flex gap-2">
-                <Button class="w-20" @click="launchDisplay(item)">
+                <Button class="w-20 transition-all duration-300" @click="launchDisplay(item)">
                   {{ item.status === "closed" ? "Launch" : "Focus" }}
                 </Button>
-                <Button variant="destructive" :disabled="item.status === 'closed'" @click="closeDisplay(item)">
+                <Button
+                  class="transition-all duration-300"
+                  variant="destructive"
+                  :disabled="item.status === 'closed'"
+                  @click="closeDisplay(item)"
+                >
                   Close
                 </Button>
               </TableCell>
