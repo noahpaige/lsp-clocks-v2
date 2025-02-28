@@ -9,19 +9,20 @@ import { useRouter } from "vue-router";
 
 import { useWindowManager } from "@/composables/useWindowManager";
 import TopNav from "./TopNav.vue";
+import Badge from "@/components/ui/badge/Badge.vue";
 
 const router = useRouter();
-const { openWindow } = useWindowManager();
+const { openWindow, closeWindow } = useWindowManager();
 
 // Table data
 const tableData = ref([
-  { name: "All Clocks", route: "/displays/all-clocks-new" },
-  { name: "Timezone Clocks", route: "/displays/timezone-clocks-new" },
-  { name: "Clock GHI", route: "/displays/clocks-demo" },
-  { name: "Clock JKL", route: "/displays/clocks-demo" },
-  { name: "Clock MNO", route: "/displays/clocks-demo" },
-  { name: "Clock PQR", route: "/displays/clocks-demo" },
-  { name: "Clock STU", route: "/displays/clocks-demo" },
+  { name: "All Clocks", route: "/displays/all-clocks-new", status: "closed" },
+  { name: "Timezone Clocks", route: "/displays/timezone-clocks-new", status: "closed" },
+  { name: "Clock GHI", route: "/displays/clocks-demo", status: "closed" },
+  { name: "Clock JKL", route: "/displays/clocks-demo", status: "closed" },
+  { name: "Clock MNO", route: "/displays/clocks-demo", status: "closed" },
+  { name: "Clock PQR", route: "/displays/clocks-demo", status: "closed" },
+  { name: "Clock STU", route: "/displays/clocks-demo", status: "closed" },
 ]);
 
 // Search functionality (basic example)
@@ -30,9 +31,17 @@ const filteredData = computed(() => {
   return tableData.value.filter((row) => row.name.toLowerCase().includes(searchQuery.value.toLowerCase()));
 });
 
-const launchClockWindow = (route) => {
-  const url = router.resolve(route).href;
-  openWindow(url);
+const launchDisplay = (item) => {
+  const url = router.resolve(item.route).href;
+  openWindow(url, () => {
+    item.status = "closed";
+  });
+  item.status = "open";
+};
+
+const closeDisplay = (item) => {
+  const url = router.resolve(item.route).href;
+  closeWindow(url);
 };
 </script>
 
@@ -48,14 +57,21 @@ const launchClockWindow = (route) => {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow v-for="item in filteredData" :key="item.id">
               <TableCell>{{ item.name }}</TableCell>
-              <TableCell>
-                <Button @click="launchClockWindow(item.route)">Launch</Button>
+              <TableCell
+                ><Badge :variant="item.status === 'open' ? 'default' : 'destructive'">{{ item.status }}</Badge>
+              </TableCell>
+              <TableCell class="flex gap-2">
+                <Button @click="launchDisplay(item)">Launch</Button>
+                <Button variant="destructive" :disabled="item.status === 'closed'" @click="closeDisplay(item)"
+                  >Close</Button
+                >
               </TableCell>
             </TableRow>
           </TableBody>
