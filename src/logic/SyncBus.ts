@@ -18,28 +18,38 @@
 
 import mitt, { Emitter } from "mitt";
 import { BroadcastChannel } from "broadcast-channel";
-import { Events } from "@/types/Events";
+import { Events, ValidEvent } from "@/types/Events";
+
+// ✅ Unique window ID to differentiate between event sources
+const windowId = crypto.randomUUID();
 
 class SyncBusProxy<T extends Record<string, any>> {
-  // Ensures T is an object
   private emitter: Emitter<T>;
-  private channel: BroadcastChannel<{ event: keyof T; payload: T[keyof T] }>;
-  private listenerMap: WeakMap<object, Map<keyof T, (payload: any) => void>>;
+  private channel: BroadcastChannel<{ event: string; payload: any; senderId: string }>;
+  private listenerMap: WeakMap<object, Map<string, (payload: any) => void>>;
 
   constructor(channelName: string) {
     this.emitter = mitt<T>();
-    this.channel = new BroadcastChannel<{ event: keyof T; payload: T[keyof T] }>(channelName);
+    this.channel = new BroadcastChannel<{ event: string; payload: any; senderId: string }>(channelName);
     this.listenerMap = new WeakMap();
 
     this.channel.onmessage = (data) => {
-      this.emitter.emit(data.event, data.payload);
+      console.log("got message");
+      // ✅ Ignore events that this window itself emitted
+      if (data.senderId === windowId) return;
+
+      this.emitter.emit(data.event as keyof T, data.payload);
     };
   }
 
   /**
-   * Subscribe an object to an event, tracking its handlers in WeakMap.
+   * Subscribe to an event. Supports both scoped and non-scoped events, including wildcards ("chat:*").
    */
-  on<K extends keyof T>(subscriber: object, event: K, handler: (payload: T[K]) => void): void {
+  on<K extends ValidEvent<T>>(
+    subscriber: object,
+    event: K,
+    handler: (payload: K extends keyof T ? T[K] : any) => void
+  ): void {
     this.emitter.on(event, handler);
 
     if (!this.listenerMap.has(subscriber)) {
@@ -47,18 +57,18 @@ class SyncBusProxy<T extends Record<string, any>> {
     }
 
     const eventHandlers = this.listenerMap.get(subscriber)!;
-    eventHandlers.set(event, handler);
+    eventHandlers.set(event as string, handler);
   }
 
   /**
-   * Unsubscribe an object's event handler, using WeakMap for cleanup.
+   * Unsubscribe an object's event handler.
    */
-  off<K extends keyof T>(subscriber: object, event: K): void {
+  off<K extends ValidEvent<T>>(subscriber: object, event: K): void {
     const eventHandlers = this.listenerMap.get(subscriber);
-    if (eventHandlers && eventHandlers.has(event)) {
-      const handler = eventHandlers.get(event)!;
+    if (eventHandlers && eventHandlers.has(event as string)) {
+      const handler = eventHandlers.get(event as string)!;
       this.emitter.off(event, handler);
-      eventHandlers.delete(event);
+      eventHandlers.delete(event as string);
 
       if (eventHandlers.size === 0) {
         this.listenerMap.delete(subscriber);
@@ -67,15 +77,20 @@ class SyncBusProxy<T extends Record<string, any>> {
   }
 
   /**
-   * Publish an event (local and cross-tab).
+   * Publish an event (local and cross-tab). Supports both scoped and non-scoped events.
    */
-  emit<K extends keyof T>(event: K, payload: T[K]): void {
-    this.emitter.emit(event, payload);
-    this.channel.postMessage({ event, payload }); // ✅ Now correctly typed
+  emit<K extends ValidEvent<T>>(event: K, payload: K extends keyof T ? T[K] : any): void {
+    this.emitter.emit(event, payload); // ✅ Local event
+
+    this.channel.postMessage({
+      event: event as string,
+      payload,
+      senderId: windowId, // ✅ Track sender
+    });
   }
 
   /**
-   * Close the broadcast channel when it's no longer needed.
+   * Close the broadcast channel.
    */
   close(): void {
     this.channel.close();

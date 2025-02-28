@@ -5,16 +5,32 @@
  */
 
 export type Events = {
-  userLoggedIn: { id: number; name: string };
-  userLoggedOut: undefined;
-  messageReceived: { sender: string; content: string };
+  "user:loggedIn": { id: number; name: string };
+  "user:loggedOut": undefined;
+  "counter-updated": number;
   toast: {
     title: string;
     options: Record<string, unknown>;
     type?: "success" | "info" | "warning" | "error"; // defaults to info
     deliverTo?: "displays" | "home" | "all"; // defaults to home
   };
+  "toast:displays": {
+    title: string;
+    options: Record<string, unknown>;
+    type?: "success" | "info" | "warning" | "error"; // defaults to info
+    deliverTo?: "displays" | "home" | "all"; // defaults to home
+  };
+  "toast:home": {
+    title: string;
+    options: Record<string, unknown>;
+    type?: "success" | "info" | "warning" | "error"; // defaults to info
+    deliverTo?: "displays" | "home" | "all"; // defaults to home
+  };
 };
+
+// ✅ Allows both scoped and non-scoped events
+export type ScopedEvent<T extends string> = `${T}:${string}`;
+export type ValidEvent<T> = keyof T | ScopedEvent<Extract<keyof T, string>>;
 
 /*
  * 🔹 Why Do We Define `Events`?
