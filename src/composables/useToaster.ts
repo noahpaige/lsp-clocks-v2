@@ -5,10 +5,16 @@ import { toast } from "vue-sonner";
 
 const DEFAULT_DURATION = 10000;
 
+// ✅ Global variable to track if toast listener is already added
+let isToastListenerAdded = false;
+
 export function useToaster() {
   const subscriber = Symbol("useToasterSubscriber"); // ✅ Unique reference for each component
 
   onMounted(() => {
+    if (isToastListenerAdded) return; // ✅ Prevent duplicate listeners
+    isToastListenerAdded = true;
+
     SyncBus.on({ subscriber }, "toast", (payload) => {
       const curPath = window.location.pathname;
       const isDisplays = payload.deliverTo === "displays" && curPath.includes("/displays/");
@@ -40,6 +46,7 @@ export function useToaster() {
    */
   onUnmounted(() => {
     SyncBus.off({ subscriber }, "toast");
+    isToastListenerAdded = false; // ✅ Reset when all components using `useToaster()` unmount
   });
 
   return { emitToast };
