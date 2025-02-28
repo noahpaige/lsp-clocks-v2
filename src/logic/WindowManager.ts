@@ -7,7 +7,7 @@ interface WindowMessage {
 
 class WindowManager {
   private static instance: WindowManager;
-  private windows: Map<string, Window | null> = new Map();
+  private windows: Map<string, { win: Window | null; callback?: () => void }> = new Map();
   private isMainWindow: boolean;
   private channel: BroadcastChannel;
   private windowCheckInterval: number | null = null;
@@ -17,7 +17,7 @@ class WindowManager {
     this.channel = new BroadcastChannel("window-manager-channel");
 
     if (this.isMainWindow) {
-      this.windows.set(window.location.pathname, window);
+      this.windows.set(window.location.pathname, { win: window });
       this.channel.onmessage = this.handleMessage.bind(this);
       window.addEventListener("beforeunload", this.closeAllWindows.bind(this));
       this.startWindowCheck();
@@ -33,9 +33,10 @@ class WindowManager {
 
   private startWindowCheck(): void {
     this.windowCheckInterval = window.setInterval(() => {
-      this.windows.forEach((win, url) => {
-        if (!win || win.closed) {
+      this.windows.forEach((entry, url) => {
+        if (!entry.win || entry.win.closed) {
           this.windows.delete(url);
+          if (entry.callback) entry.callback();
           this.channel.postMessage({ type: "close-window", data: { url } });
         }
       });
@@ -49,54 +50,67 @@ class WindowManager {
     }
   }
 
-  public openWindow(url: string): void {
+  public openWindow(url: string, onClose?: () => void): void {
     if (!this.isMainWindow) {
       this.channel.postMessage({ type: "open-window", data: { url } });
       return;
     }
 
-    if (this.windows.has(url) && !this.windows.get(url)?.closed) {
+    if (this.windows.has(url) && !this.windows.get(url)?.win?.closed) {
       this.focusWindow(url);
       return;
     }
 
     const newWindow = window.open(url, "_blank", "width=800,height=600,popup");
     if (newWindow) {
-      this.windows.set(url, newWindow);
+      this.windows.set(url, { win: newWindow, callback: onClose });
     }
   }
 
-  closeWindow(url: string): void {
+  public isWindowOpen(url: string): boolean {
+    const entry = this.windows.get(url);
+    return entry !== undefined && entry.win !== null && !entry.win.closed;
+  }
+
+  public closeWindow(url: string): void {
     if (!this.isMainWindow) {
       this.channel.postMessage({ type: "close-window", data: { url } });
       return;
     }
 
-    const win = this.windows.get(url);
-    if (win && !win.closed) {
-      win.close();
+    const entry = this.windows.get(url);
+    if (entry?.win && !entry.win.closed) {
+      entry.win.close();
       this.windows.delete(url);
+      if (entry.callback) entry.callback();
+      this.channel.postMessage({ type: "window-closed", data: { url } });
     }
   }
 
-  closeAllWindows(): void {
+  public closeAllWindows(): void {
     if (!this.isMainWindow) {
       this.channel.postMessage({ type: "close-all-windows", data: {} });
       return;
     }
-    this.windows.forEach((win) => win?.close());
+    this.windows.forEach((entry, url) => {
+      if (entry.win && !entry.win.closed) {
+        entry.win.close();
+        if (entry.callback) entry.callback();
+        this.channel.postMessage({ type: "window-closed", data: { url } });
+      }
+    });
     this.windows.clear();
     this.stopWindowCheck();
   }
 
-  focusWindow(url: string): void {
+  public focusWindow(url: string): void {
     if (!this.isMainWindow) {
       this.channel.postMessage({ type: "focus-window", data: { url } });
       return;
     }
-    const win = this.windows.get(url);
-    if (win && !win.closed) {
-      win.focus();
+    const entry = this.windows.get(url);
+    if (entry?.win && !entry.win.closed) {
+      entry.win.focus();
     }
   }
 
