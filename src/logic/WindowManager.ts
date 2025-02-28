@@ -60,8 +60,8 @@ class WindowManager {
       this.focusWindow(url);
       return;
     }
-
-    const newWindow = window.open(url, "_blank", "width=800,height=600,popup");
+    const offset = this.windows.size * 30;
+    const newWindow = window.open(url, "_blank", `width=800,height=600,left=${offset},top=${offset},popup`);
     if (newWindow) {
       this.windows.set(url, { win: newWindow, callback: onClose });
     }
