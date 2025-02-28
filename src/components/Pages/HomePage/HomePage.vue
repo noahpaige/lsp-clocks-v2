@@ -68,10 +68,12 @@ const closeDisplay = (item) => {
                 ><Badge :variant="item.status === 'open' ? 'default' : 'destructive'">{{ item.status }}</Badge>
               </TableCell>
               <TableCell class="flex gap-2">
-                <Button @click="launchDisplay(item)">Launch</Button>
-                <Button variant="destructive" :disabled="item.status === 'closed'" @click="closeDisplay(item)"
-                  >Close</Button
-                >
+                <Button class="w-20" @click="launchDisplay(item)">
+                  {{ item.status === "closed" ? "Launch" : "Focus" }}
+                </Button>
+                <Button variant="destructive" :disabled="item.status === 'closed'" @click="closeDisplay(item)">
+                  Close
+                </Button>
               </TableCell>
             </TableRow>
           </TableBody>
