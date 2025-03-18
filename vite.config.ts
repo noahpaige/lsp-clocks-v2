@@ -19,4 +19,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"), // Define "@" as an alias for "src"
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000', // Express backend
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  }
 });
