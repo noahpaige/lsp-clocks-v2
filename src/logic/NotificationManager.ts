@@ -35,10 +35,10 @@ export default class NotificationManager {
   }
 
   private createToast(notification: Notification) {
-    const options = {
-      description: notification.description,
-      duration: notification.duration || 10000,
-    };
+  const options = {
+    description: notification.description,
+    duration: typeof notification.duration === "string" ? 1000000 : (notification.duration || 10000),
+  };
     if (notification.severity === "success") return toast.success(notification.title, options);
     if (notification.severity === "info") return toast.info(notification.title, options);
     if (notification.severity === "warning") return toast.warning(notification.title, options);
