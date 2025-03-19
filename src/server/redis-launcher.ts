@@ -41,7 +41,7 @@ export function launchRedisDB() {
     const handleClose = () => {
       console.log("Shutting down Redis...");
       if (platform === "win32") {
-        exec("taskkill /F /IM redis-server.exe /T", (error, stdout, stderr) => {
+        exec("taskkill /F /IM redis-server.exe /T", (error, _stdout, stderr) => {
           if (error) {
             console.error(`Error shutting down Redis: ${stderr}`);
           } else {
@@ -49,7 +49,7 @@ export function launchRedisDB() {
           }
         });
       } else {
-        exec("pkill -f redis-server", (error, stdout, stderr) => {
+        exec("pkill -f redis-server", (error, _stdout, stderr) => {
           if (error) {
             console.error(`Error shutting down Redis: ${stderr}`);
           } else {
