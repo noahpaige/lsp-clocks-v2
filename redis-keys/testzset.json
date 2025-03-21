@@ -1,0 +1,10 @@
+{
+  "key": "testzset",
+  "type": "zset",
+  "data": {
+    "player1": 100,
+    "player2": 200,
+    "player3": 150,
+    "player4": 180
+  }
+}

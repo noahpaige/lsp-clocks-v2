@@ -1,0 +1,5 @@
+{
+  "key": "testset",
+  "type": "set",
+  "data": ["apple", "banana", "cherry", "apple"]
+}

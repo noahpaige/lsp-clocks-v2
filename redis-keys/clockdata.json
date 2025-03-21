@@ -1,0 +1,17 @@
+{
+  "key": "clockdata",
+  "type": "hash",
+  "data": {
+    "utc": 1742450051202,
+    "local": 1742424887768,
+    "timezoneStr": "PDT",
+    "t": -46800000,
+    "l": -50400000,
+    "holdRemaining": 3600000,
+    "untilRestart": 7200000,
+    "windowUsed": 0,
+    "windowRemaining": 14400000,
+    "tZero": 1742399651202,
+    "met": 95001
+  }
+}
