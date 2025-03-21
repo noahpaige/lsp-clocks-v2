@@ -98,12 +98,11 @@ async function storeInRedis(
     // Check if the key already exists
     const exists = await redis.sendCommand(["EXISTS", key]);
     if (exists === 1) {
-      console.log(`Key ${key} already exists. Deleting it before re-writing.`);
       await redis.sendCommand(["DEL", key]);
     }
 
     await command(redis, key, data);
-    console.log(`Stored ${key} as ${type} in Redis`);
+    console.log(`Loaded ${key} as ${type} in Redis`);
   } else {
     console.error(`Unsupported Redis type: ${type}`);
   }
