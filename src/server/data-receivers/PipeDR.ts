@@ -12,11 +12,10 @@ export abstract class PipeDR extends DataReceiver {
   openConnection(): void {
     this.stream.on("data", (chunk: Buffer) => {
       try {
-        const rawData = JSON.parse(chunk.toString());
-        const transformed = this.transform(rawData);
-        console.log("Transformed pipe data:", transformed);
+        const data = JSON.parse(chunk.toString());
+        this.onData(data);
       } catch (err) {
-        console.error("Failed to parse pipe data:", err);
+        console.error("Pipe data parse error:", err);
       }
     });
 
@@ -27,6 +26,4 @@ export abstract class PipeDR extends DataReceiver {
     this.stream.removeAllListeners("data");
     console.log("Pipe connection closed.");
   }
-
-  // transform will be implemented in final subclass
 }

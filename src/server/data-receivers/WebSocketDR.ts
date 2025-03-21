@@ -1,9 +1,8 @@
-// WebSocketReceiver.ts
 import { DataReceiver } from "./DataReceiver";
 
 export abstract class WebSocketDR extends DataReceiver {
-  private socket: WebSocket | null = null;
-  private url: string;
+  protected socket: WebSocket | null = null;
+  protected url: string;
 
   constructor(url: string) {
     super();
@@ -18,9 +17,12 @@ export abstract class WebSocketDR extends DataReceiver {
     };
 
     this.socket.onmessage = (event) => {
-      const rawData = JSON.parse(event.data);
-      const transformed = this.transform(rawData);
-      console.log("Transformed WebSocket data:", transformed);
+      try {
+        const data = JSON.parse(event.data);
+        this.onData(data);
+      } catch (err) {
+        console.error("WebSocket message parse error:", err);
+      }
     };
 
     this.socket.onerror = (err) => {

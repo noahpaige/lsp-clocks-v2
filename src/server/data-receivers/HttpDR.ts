@@ -15,9 +15,8 @@ export abstract class HttpDR extends DataReceiver {
     this.interval = setInterval(async () => {
       try {
         const response = await fetch(this.url);
-        const rawData = await response.json();
-        const transformed = this.transform(rawData);
-        console.log("Transformed HTTP data:", transformed);
+        const data = await response.json();
+        this.onData(data);
       } catch (err) {
         console.error("HTTP fetch error:", err);
       }

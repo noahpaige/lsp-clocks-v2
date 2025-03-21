@@ -3,7 +3,7 @@
 export abstract class DataReceiver {
   /**
    * Opens a connection to the data source.
-   * Implementation depends on the subclass (WebSocket, SSE, etc.).
+   * Implementation depends on the subclass (WebSocket, Pipe, etc.).
    */
   abstract openConnection(): void;
 
@@ -14,11 +14,8 @@ export abstract class DataReceiver {
   abstract closeConnection(): void;
 
   /**
-   * Transforms the incoming raw data into a desired format.
-   * Each subclass defines its own transformation logic.
-   *
-   * @param data - The raw data object received from the source
-   * @returns The transformed data object
+   * Handles raw incoming data. Final concrete classes should
+   * transform the data and store it in Redis.
    */
-  abstract transform(data: Record<string, any>): Record<string, any>;
+  abstract onData(data: Record<string, any>): void;
 }
