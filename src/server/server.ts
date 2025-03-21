@@ -1,6 +1,6 @@
 import express from "express";
 import { createServer } from "http";
-import { RedisAPI } from "./redis-api";
+import RedisAPI from "./RedisAPI";
 import { launchRedisDB } from "./redis-launcher";
 import { loadAllRedisKeys } from "./redis-loader";
 import path from "path";
@@ -16,11 +16,10 @@ const redisKeysFolder = path.resolve(__dirname, "../../redis-keys");
   // Middleware to parse JSON requests
   app.use(express.json());
 
-  // Launch Redis DB **BEFORE** initializing Redis API
+  // Launch Redis DB FIRST! before Redis API and loading redis keys
   await launchRedisDB();
   await loadAllRedisKeys(redisKeysFolder);
-  // Initialize Redis API with existing Express app & server (after launching Redis DB)
-  new RedisAPI(app, server);
+  RedisAPI.init(app, server);
 
   // Start server
   app.listen(PORT, () => {

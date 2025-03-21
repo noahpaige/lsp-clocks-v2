@@ -1,24 +1,44 @@
 import { Express, Request, Response } from "express";
 import { Server as SocketServer } from "socket.io";
-import { createClient } from "redis";
+import { createClient, RedisClientType } from "redis";
 import { Server as HTTPServer } from "http";
 
-export class RedisAPI {
-  private app: Express;
-  private io: SocketServer;
-  private redis = createClient();
-  private subscriber = this.redis.duplicate();
+class RedisAPI {
+  private app!: Express;
+  private io!: SocketServer;
+  private redis!: RedisClientType;
+  private subscriber!: RedisClientType;
   private allowedCommands = new Set(["set", "get", "del", "hset", "hget", "hdel", "rpush", "lpop", "lrange", "incr"]);
 
-  constructor(app: Express, server: HTTPServer) {
+  private initialized = false;
+
+  public async init(app: Express, server: HTTPServer) {
+    if (this.initialized) return;
+
     this.app = app;
     this.io = new SocketServer(server, { cors: { origin: "*" } });
 
-    this.redis.connect();
-    this.subscriber.connect();
+    this.redis = createClient();
+    this.subscriber = this.redis.duplicate();
+
+    await this.redis.connect();
+    await this.subscriber.connect();
+
     this.configureRoutes();
     this.setupWebSocketServer();
     this.listenForRedisChanges();
+
+    this.initialized = true;
+  }
+
+  public async sendCommand(command: string, args: (string | number)[]): Promise<any> {
+    try {
+      const result = await this.redis.sendCommand([command, ...args.map(String)]);
+      return result;
+    } catch (error) {
+      console.error("sendCommand failed:", error);
+      throw new Error("Redis sendCommand failed");
+    }
   }
 
   private configureRoutes() {
@@ -96,3 +116,7 @@ export class RedisAPI {
     });
   }
 }
+
+// Singleton instance
+const redisAPI = new RedisAPI();
+export default redisAPI;
