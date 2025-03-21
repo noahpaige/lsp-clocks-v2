@@ -7,26 +7,23 @@ import path from "path";
 
 const redisKeysFolder = path.resolve(__dirname, "../../redis-keys");
 
-const app = express();
-const server = createServer(app); // HTTP server for WebSockets
+(async () => {
+  const app = express();
+  const server = createServer(app); // HTTP server for WebSockets
 
-const PORT = process.env.EXPRESS_PORT || 3000;
+  const PORT = process.env.EXPRESS_PORT || 3000;
 
-// Middleware to parse JSON requests
-app.use(express.json());
+  // Middleware to parse JSON requests
+  app.use(express.json());
 
-// Launch Redis DB **BEFORE** initializing Redis API
-launchRedisDB().then(() => {
-  const cwd = process.cwd();
-  console.log(cwd);
-
-  loadAllRedisKeys(redisKeysFolder);
-
+  // Launch Redis DB **BEFORE** initializing Redis API
+  await launchRedisDB();
+  await loadAllRedisKeys(redisKeysFolder);
   // Initialize Redis API with existing Express app & server (after launching Redis DB)
   new RedisAPI(app, server);
-});
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Express server running at http://localhost:${PORT}`);
-});
+  // Start server
+  app.listen(PORT, () => {
+    console.log(`Express server running at http://localhost:${PORT}`);
+  });
+})();
