@@ -31,9 +31,9 @@ class RedisAPI {
     this.initialized = true;
   }
 
-  public async sendCommand(command: string, args: (string | number)[]): Promise<any> {
+  public async sendCommand(args: (string | number)[]): Promise<any> {
     try {
-      const result = await this.redis.sendCommand([command, ...args.map(String)]);
+      const result = await this.redis.sendCommand([...args.map(String)]);
       return result;
     } catch (error) {
       console.error("sendCommand failed:", error);
