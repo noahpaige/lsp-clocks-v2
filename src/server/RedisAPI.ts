@@ -1,4 +1,5 @@
 import { Express, Request, Response } from "express";
+import cors from "cors";
 import { Server as SocketServer } from "socket.io";
 import { createClient, RedisClientType } from "redis";
 import { Server as HTTPServer } from "http";
@@ -16,7 +17,22 @@ class RedisAPI {
     if (this.initialized) return;
 
     this.app = app;
-    this.io = new SocketServer(server, { cors: { origin: "*" } });
+    // Use CORS middleware for Express
+    this.app.use(
+      cors({
+        origin: "http://localhost:5173", // change this to your client URL
+        credentials: true,
+      })
+    );
+
+    // Configure Socket.IO with CORS options
+    this.io = new SocketServer(server, {
+      cors: {
+        origin: "http://localhost:5173", // change this to your client URL
+        methods: ["GET", "POST"],
+        credentials: true,
+      },
+    });
 
     this.redis = createClient();
     this.subscriber = this.redis.duplicate();

@@ -29,8 +29,8 @@ const redisKeysFolder = path.resolve(__dirname, "../../redis-keys");
   });
 
   // Start server
-  app.listen(PORT, () => {
-    console.log(`Express server running at http://localhost:${PORT}`);
+  server.listen(PORT, () => {
+    console.log(`SocketIO server running at http://localhost:${PORT}`);
   });
 
   // Graceful shutdown
