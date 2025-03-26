@@ -125,13 +125,53 @@ class RedisAPI {
     await this.subscriber.configSet("notify-keyspace-events", "KEA");
 
     this.subscriber.pSubscribe("__keyspace@0__:*", async (message, channel) => {
+      // Cast the event message to lowercase to avoid false positives
+      const event = message.toLowerCase();
       const key = channel.split(":")[1];
-      console.log(`Redis key updated: ${key}, Event: ${message}`);
+      console.log(`Redis key updated: ${key}, Event: ${event}`);
 
-      this.io.to(key).emit("redis-update", { key, event: message });
+      // Look up the retrieval command based on the lowercased event.
+      const retrieval = getCommandMap.get(event);
+      let data = null;
+
+      if (retrieval) {
+        try {
+          // Cast the command to lowercase as well
+          const command = retrieval.command.toLowerCase();
+          const args = retrieval.args ? [command, key, ...retrieval.args] : [command, key];
+          data = await this.sendCommand(args);
+        } catch (err) {
+          console.error("Error fetching data for key:", key, err);
+        }
+      }
+
+      this.io.to(key).emit("redis-update", { key, event, data });
     });
   }
 }
+
+const getCommandMap = new Map<string, { command: string; args?: any[] }>([
+  // String type
+  ["set", { command: "get" }],
+  ["incr", { command: "get" }],
+
+  // Hash type – here we're using HGETALL to retrieve the full hash.
+  // (If you truly want to use HGET for a single field, you might need additional context.)
+  ["hset", { command: "hgetall" }],
+  ["hdel", { command: "hgetall" }],
+
+  // List type – using LRANGE to get all elements.
+  ["rpush", { command: "lrange", args: [0, -1] }],
+  ["lpop", { command: "lrange", args: [0, -1] }],
+
+  // Set type – SMEMBERS returns all members.
+  ["sadd", { command: "smembers" }],
+  ["srem", { command: "smembers" }],
+
+  // Sorted set type – ZRANGE with WITHSCORES returns all members with their scores.
+  ["zadd", { command: "zrange", args: [0, -1, "WITHSCORES"] }],
+  ["zrem", { command: "zrange", args: [0, -1, "WITHSCORES"] }],
+]);
 
 // Singleton instance
 const redisAPI = new RedisAPI();
