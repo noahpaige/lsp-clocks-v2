@@ -30,7 +30,13 @@ export function launchRedisDB() {
     console.log(`Starting Redis server in the background: ${redisServerBinary}`);
 
     // Start Redis server as a detached process with common data directory
-    const serverProcess = spawn(redisServerBinary, ["--dir", redisDir], { detached: true, stdio: "ignore" });
+    // const serverProcess = spawn(redisServerBinary, ["--dir", redisDir], { detached: true, stdio: "ignore" });
+    //const serverProcess = spawn(redisServerBinary, ["--dir", redisDir]);
+    const serverProcess = spawn(redisServerBinary, ["--port", "6379", "--bind", "127.0.0.1", "--dir", redisDir], {
+      detached: true,
+      stdio: "ignore",
+    });
+
     serverProcess.unref(); // Allows Node.js to exit independently of the Redis process
 
     serverProcess.on("error", (error) => {
@@ -38,7 +44,7 @@ export function launchRedisDB() {
       reject(error);
     });
 
-    const handleClose = () => {
+    const handleClose = (signal?: String) => {
       console.log("Shutting down Redis...");
       if (platform === "win32") {
         exec("taskkill /F /IM redis-server.exe /T", (error, _stdout, stderr) => {
@@ -61,9 +67,8 @@ export function launchRedisDB() {
     };
 
     // Graceful shutdown handling
-    process.on("SIGINT", handleClose);
-    process.on("exit", handleClose);
-    process.on("SIGTERM", handleClose);
+    process.on("SIGINT", () => handleClose("SIGINT"));
+    process.on("SIGTERM", () => handleClose("SIGTERM"));
 
     resolve(serverProcess);
   });
