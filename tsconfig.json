@@ -1,16 +1,18 @@
 {
-  "files": [],
-  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.app.json" }],
+  "references": [],
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "target": "ESNext",
+    "module": "CommonJS",
+    "outDir": "./out",
     "baseUrl": ".",
+    "esModuleInterop": true,
     "paths": {
       "@/*": ["./src/*"],
       "@/components/*": ["./src/components/*"],
       "@/lib/utils/*": ["./src/lib/utils/*"],
       "@/logic/*": ["./src/logic/*"],
       "@/composables/*": ["./src/composables/*"]
-    }
+    },
+    "sourceMap": true
   }
 }
