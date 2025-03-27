@@ -1,6 +1,6 @@
-const API_URL = 'http://localhost:3000/api/items';
+const API_URL = "http://localhost:3000/api/items";
 
-export function useRedisClient() {
+export function useRedisCommand() {
   const queue: { command: string; key: string; args?: any[] }[] = [];
   let batchTimeout: NodeJS.Timeout | null = null;
   const BATCH_DELAY = 100;
@@ -11,8 +11,8 @@ export function useRedisClient() {
       return await requestFn();
     } catch (error) {
       if (retries <= 0) {
-        console.error('Max retries reached. Request failed.');
-        return { data: null, error: 'Max retries reached. Request failed.' };
+        console.error("Max retries reached. Request failed.");
+        return { data: null, error: "Max retries reached. Request failed." };
       }
 
       console.warn(`Retrying request in ${delay}ms... (${retries} retries left)`);
@@ -24,8 +24,8 @@ export function useRedisClient() {
   const sendInstantCommand = async (command: string, key: string, args: any[] = []) => {
     return withRetry(async () => {
       const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ command, key, args }),
       });
 
@@ -60,8 +60,8 @@ export function useRedisClient() {
 
     return withRetry(async () => {
       const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ batch: batchCommands }),
       });
 
@@ -69,7 +69,7 @@ export function useRedisClient() {
         throw new Error(`Error: ${response.statusText}`);
       }
 
-      console.log('Batch request successful:', await response.json());
+      console.log("Batch request successful:", await response.json());
     });
   };
 
