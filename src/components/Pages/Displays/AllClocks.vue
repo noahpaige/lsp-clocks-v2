@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Clock from "@/components/Clock/Clock.vue";
 import AnimatedBackground4 from "@/components/AnimatedBackground4.vue";
-import { reactive, watch } from "vue";
+import { reactive } from "vue";
 import { useRedisObserver } from "@/composables/useRedisObserver";
 import { ClockDataType, parseClockData } from "@/types/ClockData";
 
@@ -24,12 +24,6 @@ addObserver("clockdata", (response) => {
   const parsed = parseClockData(response.data);
   Object.assign(clockData, parsed);
 });
-
-watch(
-  () => ({ ...clockData }),
-  (newVal) => console.log("clockData updated", newVal),
-  { deep: true }
-);
 </script>
 
 <template>
