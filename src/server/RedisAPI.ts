@@ -9,7 +9,25 @@ class RedisAPI {
   private io!: SocketServer;
   private redis!: RedisClientType;
   private subscriber!: RedisClientType;
-  private allowedCommands = new Set(["set", "get", "del", "hset", "hget", "hdel", "rpush", "lpop", "lrange", "incr"]);
+  private allowedCommands = new Set([
+    "SET",
+    "GET",
+    "DEL",
+    "HSET",
+    "HGET",
+    "HGETALL",
+    "HDEL",
+    "RPUSH",
+    "LPOP",
+    "LRANGE",
+    "INCR",
+    "SMEMBERS",
+    "SADD",
+    "SREM",
+    "ZADD",
+    "ZRANGE",
+    "ZREM",
+  ]);
 
   private initialized = false;
 
@@ -47,13 +65,24 @@ class RedisAPI {
     this.initialized = true;
   }
 
-  public async sendCommand(args: (string | number)[]): Promise<any> {
+  public async sendCmd(command: string, args: any[] = []): Promise<any> {
     try {
-      const result = await this.redis.sendCommand([...args.map(String)]);
+      const commandUpper = command.toUpperCase();
+      if (!this.allowedCommands.has(commandUpper)) {
+        throw new Error(`Command ${commandUpper} is not allowed.`);
+      }
+      // Get the command-specific method from the Redis client.
+      // We assume the method names are in uppercase.
+      const cmd = (this.redis as any)[commandUpper];
+      if (typeof cmd !== "function") {
+        throw new Error(`Command ${commandUpper} is not a valid Redis command.`);
+      }
+      // Call the command-specific method with the given arguments
+      const result = await cmd.apply(this.redis, args);
       return result;
     } catch (error) {
-      console.error("sendCommand failed:", error);
-      throw new Error("Redis sendCommand failed");
+      console.error("sendCmd failed:", error);
+      throw error;
     }
   }
 
@@ -73,16 +102,16 @@ class RedisAPI {
         }
 
         const results = await Promise.all(
-          batch.map(async ({ command, key, args = [] }) => {
-            if (!this.allowedCommands.has(command)) {
-              return { command, key, error: `Command not allowed: ${command}` };
+          batch.map(async ({ command, key, args = [] }: any) => {
+            const commandUpper = command.toUpperCase();
+            if (!this.allowedCommands.has(commandUpper)) {
+              return { command: commandUpper, key, error: `Command not allowed: ${commandUpper}` };
             }
-
             try {
-              const result = await (this.redis as any)[command](key, ...args);
-              return { command, key, result };
+              const result = await this.sendCmd(commandUpper, [key, ...args]);
+              return { command: commandUpper, key, result };
             } catch (err: any) {
-              return { command, key, error: err.message };
+              return { command: commandUpper, key, error: err.message };
             }
           })
         );
@@ -94,12 +123,13 @@ class RedisAPI {
         return res.status(400).json({ error: "Missing command or key" });
       }
 
-      if (!this.allowedCommands.has(command)) {
-        return res.status(403).json({ error: `Command not allowed: ${command}` });
+      const commandUpper = command.toUpperCase();
+      if (!this.allowedCommands.has(commandUpper)) {
+        return res.status(403).json({ error: `Command not allowed: ${commandUpper}` });
       }
 
-      const result = await (this.redis as any)[command](key, ...args);
-      return res.json({ success: true, command, key, result });
+      const result = await this.sendCmd(commandUpper, [key, ...args]);
+      return res.json({ success: true, command: commandUpper, key, result });
     } catch (error) {
       console.error("Redis Command Error:", error);
       res.status(500).json({ error: "Redis command execution failed" });
@@ -125,21 +155,20 @@ class RedisAPI {
     await this.subscriber.configSet("notify-keyspace-events", "KEA");
 
     this.subscriber.pSubscribe("__keyspace@0__:*", async (message, channel) => {
-      // Cast the event message to lowercase to avoid false positives
-      const event = message.toLowerCase();
+      // Convert the event message to uppercase.
+      const event = message.toUpperCase();
       const key = channel.split(":")[1];
       console.log(`Redis key updated: ${key}, Event: ${event}`);
 
-      // Look up the retrieval command based on the lowercased event.
+      // Look up the retrieval command based on the uppercase event.
       const retrieval = getCommandMap.get(event);
       let data = null;
 
       if (retrieval) {
         try {
-          // Cast the command to lowercase as well
-          const command = retrieval.command.toLowerCase();
-          const args = retrieval.args ? [command, key, ...retrieval.args] : [command, key];
-          data = await this.sendCommand(args);
+          const commandUpper = retrieval.command.toUpperCase();
+          const args = retrieval.args ? [key, ...retrieval.args] : [key];
+          data = await this.sendCmd(commandUpper, args);
         } catch (err) {
           console.error("Error fetching data for key:", key, err);
         }
@@ -152,25 +181,24 @@ class RedisAPI {
 
 const getCommandMap = new Map<string, { command: string; args?: any[] }>([
   // String type
-  ["set", { command: "get" }],
-  ["incr", { command: "get" }],
+  ["SET", { command: "GET" }],
+  ["INCR", { command: "GET" }],
 
   // Hash type – here we're using HGETALL to retrieve the full hash.
-  // (If you truly want to use HGET for a single field, you might need additional context.)
-  ["hset", { command: "hgetall" }],
-  ["hdel", { command: "hgetall" }],
+  ["HSET", { command: "HGETALL" }],
+  ["HDEL", { command: "HGETALL" }],
 
   // List type – using LRANGE to get all elements.
-  ["rpush", { command: "lrange", args: [0, -1] }],
-  ["lpop", { command: "lrange", args: [0, -1] }],
+  ["RPUSH", { command: "LRANGE", args: [0, -1] }],
+  ["LPOP", { command: "LRANGE", args: [0, -1] }],
 
   // Set type – SMEMBERS returns all members.
-  ["sadd", { command: "smembers" }],
-  ["srem", { command: "smembers" }],
+  ["SADD", { command: "SMEMBERS" }],
+  ["SREM", { command: "SMEMBERS" }],
 
   // Sorted set type – ZRANGE with WITHSCORES returns all members with their scores.
-  ["zadd", { command: "zrange", args: [0, -1, "WITHSCORES"] }],
-  ["zrem", { command: "zrange", args: [0, -1, "WITHSCORES"] }],
+  ["ZADD", { command: "ZRANGE", args: [0, -1, "WITHSCORES"] }],
+  ["ZREM", { command: "ZRANGE", args: [0, -1, "WITHSCORES"] }],
 ]);
 
 // Singleton instance

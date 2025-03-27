@@ -26,7 +26,7 @@ export class ClockSpooferDR extends DataReceiver {
       windowUsed: 0,
       windowRemaining: 1000 * 60 * 60 * 4,
       tZero: tZero,
-      met: utc - tZero,
+      met: tZero - utc,
     };
   }
   /**
@@ -41,14 +41,14 @@ export class ClockSpooferDR extends DataReceiver {
         utc: date.getTime() + date.getTimezoneOffset() * 60 * 1000,
         local: Date.now(),
         timezoneStr: new Date().toLocaleString("en-US", { timeZoneName: "short" }).split(" ")[3],
-        t: this.clockData.t++,
-        l: this.clockData.l++,
+        t: this.clockData.t + 1000,
+        l: this.clockData.l + 1000,
         holdRemaining: this.clockData.holdRemaining,
         untilRestart: this.clockData.untilRestart,
         windowUsed: 0,
         windowRemaining: 1000 * 60 * 60 * 4,
-        tZero: date.getTime() + date.getTimezoneOffset() * 60 * 1000 - 1000 * 60 * 60 * 14,
-        met: this.clockData.met++,
+        tZero: this.clockData.tZero,
+        met: this.clockData.met + 1000,
       };
 
       this.onData(this.clockData);
@@ -71,7 +71,7 @@ export class ClockSpooferDR extends DataReceiver {
    * transform the data and store it in Redis.
    */
   onData(data: Record<string, any>): void {
-    const args = ["HSET", this.REDISKEY, ...Object.entries(data).flatMap(([field, value]) => [field, String(value)])];
-    RedisAPI.sendCommand(args);
+    const args = [this.REDISKEY, data];
+    RedisAPI.sendCmd("HSET", args);
   }
 }
