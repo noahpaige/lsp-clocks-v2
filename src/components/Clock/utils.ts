@@ -18,8 +18,9 @@ export function timeToArr(time: number, timeType: TimeType, timeFormat: TimeForm
 
 function spanToDDHHMMSS(spanMS: number): (string | undefined)[] {
   const ts = TimeSpan.fromMilliseconds(Math.abs(spanMS));
+  const prefix = spanMS >= 0 ? "" : "-";
   return [
-    Math.floor(ts.days).toString(),
+    prefix + Math.floor(ts.days).toString(),
     Math.floor(ts.hours).toString().padStart(2, "0"),
     Math.floor(ts.minutes).toString().padStart(2, "0"),
     Math.floor(ts.seconds).toString().padStart(2, "0"),
@@ -28,10 +29,10 @@ function spanToDDHHMMSS(spanMS: number): (string | undefined)[] {
 
 function spanToHHMMSS(spanMS: number): (string | undefined)[] {
   const ts = TimeSpan.fromMilliseconds(Math.abs(spanMS));
-  const hours = ts.hours + ts.days * 24;
+  const prefix = spanMS >= 0 ? "" : "-";
   return [
     undefined,
-    Math.floor(ts.hours).toString().padStart(2, "0"),
+    prefix + Math.floor(ts.hours).toString().padStart(2, "0"),
     Math.floor(ts.minutes).toString().padStart(2, "0"),
     Math.floor(ts.seconds).toString().padStart(2, "0"),
   ];
@@ -40,12 +41,20 @@ function spanToHHMMSS(spanMS: number): (string | undefined)[] {
 function spanToMMSS(spanMS: number): (string | undefined)[] {
   const ts = TimeSpan.fromMilliseconds(Math.abs(spanMS));
   const minutes = ts.minutes + ts.hours * 60 + ts.days * 24;
-  return [undefined, undefined, Math.floor(minutes).toString().padStart(2, "0"), Math.floor(ts.seconds).toString().padStart(2, "0")];
+  const prefix = spanMS >= 0 ? "" : "-";
+  return [
+    undefined,
+    undefined,
+    prefix + Math.floor(minutes).toString().padStart(2, "0"),
+    Math.floor(ts.seconds).toString().padStart(2, "0"),
+  ];
 }
 
 function spanToSS(spanMS: number): (string | undefined)[] {
   const ts = TimeSpan.fromMilliseconds(Math.abs(spanMS));
-  return [undefined, undefined, undefined, Math.floor(ts.totalSeconds).toString().padStart(2, "0")];
+  const prefix = spanMS >= 0 ? "" : "-";
+
+  return [undefined, undefined, undefined, prefix + Math.floor(ts.totalSeconds).toString().padStart(2, "0")];
 }
 
 function dateToDDHHMMSS(dateMS: number): (string | undefined)[] {
@@ -59,8 +68,9 @@ function dateToDDHHMMSS(dateMS: number): (string | undefined)[] {
     );
   };
   const date = new Date(dateMS);
+  const prefix = dateMS >= 0 ? "" : "-";
   return [
-    Math.floor(getDayOfYear(date)).toString().padStart(3, "0"),
+    prefix + Math.floor(getDayOfYear(date)).toString().padStart(3, "0"),
     Math.floor(date.getHours()).toString().padStart(2, "0"),
     Math.floor(date.getMinutes()).toString().padStart(2, "0"),
     Math.floor(date.getSeconds()).toString().padStart(2, "0"),
@@ -69,9 +79,11 @@ function dateToDDHHMMSS(dateMS: number): (string | undefined)[] {
 
 function dateToHHMMSS(dateMS: number): (string | undefined)[] {
   const date = new Date(dateMS);
+  const prefix = dateMS >= 0 ? "" : "-";
+
   return [
     undefined,
-    Math.floor(date.getHours()).toString().padStart(2, "0"),
+    prefix + Math.floor(date.getHours()).toString().padStart(2, "0"),
     Math.floor(date.getMinutes()).toString().padStart(2, "0"),
     Math.floor(date.getSeconds()).toString().padStart(2, "0"),
   ];
@@ -79,15 +91,19 @@ function dateToHHMMSS(dateMS: number): (string | undefined)[] {
 
 function dateToMMSS(dateMS: number): (string | undefined)[] {
   const date = new Date(dateMS);
+  const prefix = dateMS >= 0 ? "" : "-";
+
   return [
     undefined,
     undefined,
-    Math.floor(date.getMinutes()).toString().padStart(2, "0"),
+    prefix + Math.floor(date.getMinutes()).toString().padStart(2, "0"),
     Math.floor(date.getSeconds()).toString().padStart(2, "0"),
   ];
 }
 
 function dateToSS(dateMS: number): (string | undefined)[] {
   const date = new Date(dateMS);
-  return [undefined, undefined, undefined, Math.floor(date.getSeconds()).toString().padStart(2, "0")];
+  const prefix = dateMS >= 0 ? "" : "-";
+
+  return [undefined, undefined, undefined, prefix + Math.floor(date.getSeconds()).toString().padStart(2, "0")];
 }
