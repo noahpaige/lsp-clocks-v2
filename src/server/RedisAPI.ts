@@ -10,6 +10,7 @@ class RedisAPI {
   private redis!: RedisClientType;
   private subscriber!: RedisClientType;
   private allowedCommands = new Set([
+    "**GETALL**", // custom command that retrieves the contents of a given key, regardless of key type
     "SET",
     "GET",
     "DEL",
@@ -65,31 +66,50 @@ class RedisAPI {
     this.initialized = true;
   }
 
-  public async sendCmd(command: string, args: any[] = []): Promise<any> {
-    try {
-      const commandUpper = command.toUpperCase();
-      if (!this.allowedCommands.has(commandUpper)) {
-        throw new Error(`Command ${commandUpper} is not allowed.`);
-      }
-      // Get the command-specific method from the Redis client.
-      // We assume the method names are in uppercase.
-      const cmd = (this.redis as any)[commandUpper];
-      if (typeof cmd !== "function") {
-        throw new Error(`Command ${commandUpper} is not a valid Redis command.`);
-      }
-      // Call the command-specific method with the given arguments
-      const result = await cmd.apply(this.redis, args);
-      return result;
-    } catch (error) {
-      console.error("sendCmd failed:", error);
-      throw error;
-    }
-  }
-
   private configureRoutes() {
     this.app.post("/api/items", async (req, res) => {
       await this.onMessage(req, res);
     });
+  }
+
+  private async sendGetAll(args: any[]) {
+    const key = args[0];
+    if (!key) throw new Error("**GETALL** requires a key as the first argument.");
+
+    const type = await this.redis.type(key);
+    const cmdInfo = typeToCommandMap.get(type);
+
+    if (!cmdInfo) {
+      if (type === "none") throw new Error(`Key "${key}" does not exist.`);
+      throw new Error(`Unsupported Redis type: ${type}`);
+    }
+
+    return await this.sendCmd(cmdInfo.command, cmdInfo.args ? [key, ...cmdInfo.args] : [key]);
+  }
+
+  public async sendCmd(command: string, args: any[] = []): Promise<any> {
+    try {
+      const commandUpper = command.toUpperCase();
+
+      if (!this.allowedCommands.has(commandUpper)) {
+        throw new Error(`Command ${commandUpper} is not allowed.`);
+      }
+
+      if (commandUpper === "**GETALL**") {
+        return this.sendGetAll(args);
+      }
+
+      // Handle normal Redis commands
+      const cmd = (this.redis as any)[commandUpper];
+      if (typeof cmd !== "function") {
+        throw new Error(`Command ${commandUpper} is not a valid Redis command.`);
+      }
+
+      return await cmd.apply(this.redis, args);
+    } catch (error) {
+      console.error("sendCmd failed:", error);
+      throw error;
+    }
   }
 
   private async onMessage(req: Request, res: Response) {
@@ -105,18 +125,18 @@ class RedisAPI {
           batch.map(async ({ command, key, args = [] }: any) => {
             const commandUpper = command.toUpperCase();
             if (!this.allowedCommands.has(commandUpper)) {
-              return { command: commandUpper, key, error: `Command not allowed: ${commandUpper}` };
+              return { event: commandUpper, key, error: `Command not allowed: ${commandUpper}` };
             }
             try {
               const result = await this.sendCmd(commandUpper, [key, ...args]);
-              return { command: commandUpper, key, result };
+              return res.json(result);
             } catch (err: any) {
-              return { command: commandUpper, key, error: err.message };
+              return { event: commandUpper, key, error: err.message };
             }
           })
         );
 
-        return res.json({ success: true, results });
+        return res.json({ success: true, results, blart: "mallcop" });
       }
 
       if (!command || !key) {
@@ -129,7 +149,7 @@ class RedisAPI {
       }
 
       const result = await this.sendCmd(commandUpper, [key, ...args]);
-      return res.json({ success: true, command: commandUpper, key, result });
+      return res.json(result);
     } catch (error) {
       console.error("Redis Command Error:", error);
       res.status(500).json({ error: "Redis command execution failed" });
@@ -161,14 +181,14 @@ class RedisAPI {
       console.log(`Redis key updated: ${key}, Event: ${event}`);
 
       // Look up the retrieval command based on the uppercase event.
-      const retrieval = getCommandMap.get(event);
+      const dataType = commandToTypeMap.get(event);
+      const retrieval = typeToCommandMap.get(dataType);
       let data = null;
 
       if (retrieval) {
         try {
-          const commandUpper = retrieval.command.toUpperCase();
           const args = retrieval.args ? [key, ...retrieval.args] : [key];
-          data = await this.sendCmd(commandUpper, args);
+          data = await this.sendCmd(retrieval.command, args);
         } catch (err) {
           console.error("Error fetching data for key:", key, err);
         }
@@ -179,26 +199,24 @@ class RedisAPI {
   }
 }
 
-const getCommandMap = new Map<string, { command: string; args?: any[] }>([
-  // String type
-  ["SET", { command: "GET" }],
-  ["INCR", { command: "GET" }],
+const commandToTypeMap = new Map<string, string>([
+  ["SET", "string"],
+  ["INCR", "string"],
+  ["HSET", "hash"],
+  ["HDEL", "hash"],
+  ["RPUSH", "list"],
+  ["LPOP", "list"],
+  ["SADD", "set"],
+  ["SREM", "set"],
+  ["ZADD", "zset"],
+]);
 
-  // Hash type – here we're using HGETALL to retrieve the full hash.
-  ["HSET", { command: "HGETALL" }],
-  ["HDEL", { command: "HGETALL" }],
-
-  // List type – using LRANGE to get all elements.
-  ["RPUSH", { command: "LRANGE", args: [0, -1] }],
-  ["LPOP", { command: "LRANGE", args: [0, -1] }],
-
-  // Set type – SMEMBERS returns all members.
-  ["SADD", { command: "SMEMBERS" }],
-  ["SREM", { command: "SMEMBERS" }],
-
-  // Sorted set type – ZRANGE with WITHSCORES returns all members with their scores.
-  ["ZADD", { command: "ZRANGE", args: [0, -1, "WITHSCORES"] }],
-  ["ZREM", { command: "ZRANGE", args: [0, -1, "WITHSCORES"] }],
+const typeToCommandMap = new Map<string, { command: string; args?: any[] }>([
+  ["string", { command: "GET" }],
+  ["hash", { command: "HGETALL" }],
+  ["list", { command: "LRANGE", args: [0, -1] }],
+  ["set", { command: "SMEMBERS" }],
+  ["zset", { command: "ZRANGE", args: [0, -1, "WITHSCORES"] }],
 ]);
 
 // Singleton instance
