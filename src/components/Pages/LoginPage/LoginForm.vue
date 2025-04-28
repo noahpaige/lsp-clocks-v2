@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToaster } from "@/composables/useToaster";
+import router from "@/router/router";
 import { ref } from "vue";
 
 const { emitToast } = useToaster();
@@ -24,6 +25,13 @@ const onClickLogin = () => {
     type: "info",
     deliverTo: "all",
   });
+
+  // Set authentication state
+  // TODO: replace this later with more robust authentication
+  localStorage.setItem("isAuthenticated", "true");
+
+  // Redirect to the homepage
+  router.push("/");
 };
 
 const onClickForgotPassword = () => {
@@ -35,11 +43,7 @@ const onClickForgotPassword = () => {
 };
 
 const onClickRegister = () => {
-  emitToast({
-    title: "Register -- not implemented yet.",
-    type: "info",
-    deliverTo: "all",
-  });
+  router.push("/register");
 };
 
 const onClickTerms = () => {

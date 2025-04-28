@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToaster } from "@/composables/useToaster";
+import router from "@/router/router";
 import { ref } from "vue";
 
 const { emitToast } = useToaster();
@@ -37,11 +38,7 @@ const onClickRegisterSubmit = () => {
 };
 
 const onClickLoginInstead = () => {
-  emitToast({
-    title: "Login page link clicked -- not implemented yet.",
-    type: "info",
-    deliverTo: "all",
-  });
+  router.push("/login");
 };
 
 const onClickTerms = () => {
