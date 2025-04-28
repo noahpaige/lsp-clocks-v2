@@ -10,19 +10,19 @@ export type Events = {
   "counter-updated": number;
   toast: {
     title: string;
-    options: Record<string, unknown>;
+    options?: Record<string, unknown>;
     type?: "success" | "info" | "warning" | "error"; // defaults to info
     deliverTo?: "displays" | "home" | "all"; // defaults to home
   };
   "toast:displays": {
     title: string;
-    options: Record<string, unknown>;
+    options?: Record<string, unknown>;
     type?: "success" | "info" | "warning" | "error"; // defaults to info
     deliverTo?: "displays" | "home" | "all"; // defaults to home
   };
   "toast:home": {
     title: string;
-    options: Record<string, unknown>;
+    options?: Record<string, unknown>;
     type?: "success" | "info" | "warning" | "error"; // defaults to info
     deliverTo?: "displays" | "home" | "all"; // defaults to home
   };
