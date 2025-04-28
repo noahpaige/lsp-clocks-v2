@@ -1,9 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Settings, Clock } from "lucide-vue-next";
 import { useToaster } from "@/composables/useToaster";
 
