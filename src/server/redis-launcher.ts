@@ -30,10 +30,8 @@ export function launchRedisDB() {
     console.log(`Starting Redis server in the background: ${redisServerBinary}`);
 
     // Start Redis server as a detached process with common data directory
-    // const serverProcess = spawn(redisServerBinary, ["--dir", redisDir], { detached: true, stdio: "ignore" });
-    //const serverProcess = spawn(redisServerBinary, ["--dir", redisDir]);
     const serverProcess = spawn(redisServerBinary, ["--port", "6379", "--bind", "127.0.0.1", "--dir", redisDir], {
-      detached: true,
+      // detached: true,
       stdio: "ignore",
     });
 
