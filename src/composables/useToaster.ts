@@ -1,5 +1,5 @@
 import { onMounted, onUnmounted } from "vue";
-import { SyncBus } from "@/logic/SyncBus";
+import { SyncBus } from "@/composables/shared/SyncBus";
 import { Events } from "@/types/Events";
 import { toast } from "vue-sonner";
 

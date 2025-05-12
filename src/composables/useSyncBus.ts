@@ -1,5 +1,5 @@
 import { onUnmounted } from "vue";
-import { SyncBus } from "@/logic/SyncBus";
+import { SyncBus } from "@/composables/shared/SyncBus";
 import { Events, ValidEvent } from "@/types/Events";
 
 export function useSyncBus() {

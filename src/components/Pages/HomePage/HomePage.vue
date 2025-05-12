@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Settings, Clock } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
-import { useWindowManager } from "@/composables/useWindowManager";
+import { useWindowManager } from "@/composables/WindowManager/useWindowManager";
 import TopNav from "./TopNav.vue";
 import Badge from "@/components/ui/badge/Badge.vue";
 

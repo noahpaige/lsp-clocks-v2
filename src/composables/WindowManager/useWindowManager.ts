@@ -1,5 +1,5 @@
 import { onMounted, onUnmounted } from "vue";
-import WindowManager from "@/logic/WindowManager"; // Update with the actual path
+import WindowManager from "@/composables/WindowManager/WindowManager";
 
 export function useWindowManager() {
   const windowManager = WindowManager.getInstance();
