@@ -1,9 +1,49 @@
 <script setup lang="ts">
+import { onUnmounted } from "vue";
+
 type hslColor = {
   h: number;
   s: number;
   l: number;
 };
+
+/**
+ * Path pool for better memory management and performance
+ * Reuses SVG path strings instead of creating new ones for each blob
+ */
+class PathPool {
+  private pool = new Map<string, string>();
+
+  /**
+   * Gets a path from the pool, creating it if it doesn't exist
+   * @param pathKey - Unique key for the path
+   * @param createFn - Function to create the path if it doesn't exist
+   * @returns SVG path string
+   */
+  getPath(pathKey: string, createFn: () => string): string {
+    if (!this.pool.has(pathKey)) {
+      this.pool.set(pathKey, createFn());
+    }
+    return this.pool.get(pathKey)!;
+  }
+
+  /**
+   * Clears all cached paths to prevent memory leaks
+   */
+  clear(): void {
+    this.pool.clear();
+  }
+
+  /**
+   * Gets the size of the pool for debugging
+   */
+  size(): number {
+    return this.pool.size;
+  }
+}
+
+// Global pool instance
+const pathPool = new PathPool();
 
 // Interpolate a single value
 const interpolate = (a: number, b: number, factor: number) => a + factor * (b - a);
@@ -42,28 +82,60 @@ const paths = [
 const c1 = { h: 221, s: 105, l: 22 }; //{ h: 351, s: 53, l: 38 };
 const c2 = { h: 242.2, s: 84, l: 4.9 }; //{ h: 248, s: 65, l: 54 };
 
-const l: any[] = [];
-const n = 8;
-const gap = 0.75;
-const shapeMin = 0.5;
-const shapeMax = 3;
-for (let i = 0; i < n; i++) {
-  const hFactor = (i / n) * (1 - gap);
-  const sFactor = i / n;
-  const lFactor = 1 - (i / n) * (1 - gap);
-  const rotation = Math.floor(Math.random() * 360);
-  const scale = interpolate(shapeMax, shapeMin, sFactor);
-  const duration = 20 + Math.random() * 20;
-  l.push({
-    path: paths[Math.floor(Math.random() * paths.length)],
-    colors: [
-      hslToString(interpolateHSL(c1, c2, hFactor, sFactor, lFactor)),
-      hslToString(interpolateHSL(c1, c2, hFactor + gap, sFactor, lFactor - gap)),
-    ],
-    groupStyle: `transform: rotate(${rotation}deg) scale(${scale}); translateZ: 0;`,
-    animDuration: duration + "s",
-  });
+/**
+ * Generate blob data using path pooling for better performance
+ * @param count - Number of blobs to generate
+ * @returns Array of blob data objects
+ */
+const generateBlobs = (count: number) => {
+  const blobs: any[] = [];
+  const gap = 0.75;
+  const shapeMin = 0.5;
+  const shapeMax = 3;
+
+  for (let i = 0; i < count; i++) {
+    const hFactor = (i / count) * (1 - gap);
+    const sFactor = i / count;
+    const lFactor = 1 - (i / count) * (1 - gap);
+    const rotation = Math.floor(Math.random() * 360);
+    const scale = interpolate(shapeMax, shapeMin, sFactor);
+    const duration = 20 + Math.random() * 20;
+
+    // Use path pool to get optimized path
+    const pathIndex = Math.floor(Math.random() * paths.length);
+    const pathKey = `path_${pathIndex}`;
+
+    const path = pathPool.getPath(pathKey, () => paths[pathIndex]);
+
+    blobs.push({
+      path: path,
+      colors: [
+        hslToString(interpolateHSL(c1, c2, hFactor, sFactor, lFactor)),
+        hslToString(interpolateHSL(c1, c2, hFactor + gap, sFactor, lFactor - gap)),
+      ],
+      groupStyle: `transform: rotate(${rotation}deg) scale(${scale}); translateZ: 0;`,
+      animDuration: duration + "s",
+    });
+  }
+
+  return blobs;
+};
+
+// Generate blobs using the optimized function
+const l = generateBlobs(8);
+
+// Log pool size for debugging (only in development)
+if (process.env.NODE_ENV === "development") {
+  console.log(`🎨 Path Pool: ${pathPool.size()} unique paths cached`);
 }
+
+// Cleanup path pool on component unmount to prevent memory leaks
+onUnmounted(() => {
+  pathPool.clear();
+  if (process.env.NODE_ENV === "development") {
+    console.log("🎨 Path Pool cleared on component unmount");
+  }
+});
 </script>
 
 <template>
