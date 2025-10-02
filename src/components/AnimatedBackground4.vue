@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted } from "vue";
+import { onUnmounted, onMounted, ref } from "vue";
 
 type hslColor = {
   h: number;
@@ -7,28 +7,37 @@ type hslColor = {
   l: number;
 };
 
+type BlobData = {
+  path: Path2D;
+  rotation: {
+    angle: number;
+    speed: number;
+  };
+  scale: number;
+  colors: { a: string; b: string }[];
+};
+
 /**
- * Path pool for better memory management and performance
- * Reuses SVG path strings instead of creating new ones for each blob
+ * Path2D pool for better memory management and performance
+ * Reuses Path2D objects instead of creating new ones for each blob
  */
-class PathPool {
-  private pool = new Map<string, string>();
+class Path2DPool {
+  private pool = new Map<string, Path2D>();
 
   /**
-   * Gets a path from the pool, creating it if it doesn't exist
-   * @param pathKey - Unique key for the path
-   * @param createFn - Function to create the path if it doesn't exist
-   * @returns SVG path string
+   * Gets a Path2D object from the pool, creating it if it doesn't exist
+   * @param rawPath - SVG path string
+   * @returns Path2D object
    */
-  getPath(pathKey: string, createFn: () => string): string {
-    if (!this.pool.has(pathKey)) {
-      this.pool.set(pathKey, createFn());
+  getPath(rawPath: string): Path2D {
+    if (!this.pool.has(rawPath)) {
+      this.pool.set(rawPath, new Path2D(rawPath));
     }
-    return this.pool.get(pathKey)!;
+    return this.pool.get(rawPath)!;
   }
 
   /**
-   * Clears all cached paths to prevent memory leaks
+   * Clears all cached Path2D objects to prevent memory leaks
    */
   clear(): void {
     this.pool.clear();
@@ -43,32 +52,23 @@ class PathPool {
 }
 
 // Global pool instance
-const pathPool = new PathPool();
+const path2DPool = new Path2DPool();
 
-// Interpolate a single value
-const interpolate = (a: number, b: number, factor: number) => a + factor * (b - a);
+// Animation configuration
+const ANIMATION_CONFIG = {
+  blobCount: 4,
+  canvasWidth: 1920, // Fixed canvas width
+  canvasHeight: 1080, // Fixed canvas height
+  frameRate: 60,
+  blurAmount: 40,
+  speedRange: {
+    min: 0.3,
+    max: 0.5,
+  },
+  scale: 32, // Uniform scale for all blobs
+} as const;
 
-function interpolateHSL(color1: hslColor, color2: hslColor, hFactor: number, sFactor: number, lFactor: number) {
-  // Ensure hue stays within 0-360 range
-  const normalizeHue = (hue: number) => (hue + 360) % 360;
-
-  // Interpolate hue, handling the circular nature
-  let h = interpolate(color1.h, color2.h, hFactor);
-  h = normalizeHue(h);
-
-  // Interpolate saturation and lightness
-  const s = interpolate(color1.s, color2.s, sFactor);
-  const l = interpolate(color1.l, color2.l, lFactor);
-
-  // Return the interpolated color as an object
-  return {
-    h: Math.round(h),
-    s: Math.round(s),
-    l: Math.round(l),
-  };
-}
-
-// Helper function to convert the object to an HSL string
+// Helper function to convert HSL object to CSS string
 function hslToString(hsl: hslColor) {
   return `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
 }
@@ -79,115 +79,178 @@ const paths = [
   "M26.6,-30.6C33.8,-25.6,38.7,-16.6,39.7,-7.5C40.8,1.7,38,11,33.4,19.6C28.8,28.2,22.4,36.1,13.9,39.9C5.4,43.7,-5.2,43.5,-14.3,39.9C-23.4,36.3,-31,29.3,-33.6,21.2C-36.2,13,-33.8,3.8,-31,-4.4C-28.3,-12.5,-25.3,-19.5,-20,-24.8C-14.8,-30.2,-7.4,-33.9,1.1,-35.2C9.7,-36.6,19.3,-35.6,26.6,-30.6Z",
 ];
 
-const c1 = { h: 221, s: 105, l: 22 }; //{ h: 351, s: 53, l: 38 };
-const c2 = { h: 242.2, s: 84, l: 4.9 }; //{ h: 248, s: 65, l: 54 };
+const c1 = { h: 221, s: 105, l: 22 };
+const c2 = { h: 242.2, s: 84, l: 4.9 };
+
+// Simple color interpolation for 4 blobs
+const generateBlobColors = (blobIndex: number) => {
+  const colors = [{ a: hslToString(c1), b: hslToString(c2) }];
+  return colors[blobIndex % colors.length];
+};
 
 /**
- * Generate blob data using path pooling for better performance
- * @param count - Number of blobs to generate
- * @returns Array of blob data objects
+ * Generate blob data optimized for Canvas rendering
  */
-const generateBlobs = (count: number) => {
-  const blobs: any[] = [];
-  const gap = 0.75;
-  const shapeMin = 0.5;
-  const shapeMax = 3;
+const generateBlobs = (): BlobData[] => {
+  const blobs: BlobData[] = [];
 
-  for (let i = 0; i < count; i++) {
-    const hFactor = (i / count) * (1 - gap);
-    const sFactor = i / count;
-    const lFactor = 1 - (i / count) * (1 - gap);
-    const rotation = Math.floor(Math.random() * 360);
-    const scale = interpolate(shapeMax, shapeMin, sFactor);
-    const duration = 20 + Math.random() * 20;
+  for (let i = 0; i < ANIMATION_CONFIG.blobCount; i++) {
+    const rawPath = paths[Math.floor(Math.random() * paths.length)];
+    const path2D = path2DPool.getPath(rawPath);
 
-    // Use path pool to get optimized path
-    const pathIndex = Math.floor(Math.random() * paths.length);
-    const pathKey = `path_${pathIndex}`;
+    const speed =
+      ANIMATION_CONFIG.speedRange.min +
+      (ANIMATION_CONFIG.speedRange.max - ANIMATION_CONFIG.speedRange.min) * Math.random();
 
-    const path = pathPool.getPath(pathKey, () => paths[pathIndex]);
+    // Generate specific colors for this blob
+    const blobColors = generateBlobColors(i);
 
     blobs.push({
-      path: path,
-      colors: [
-        hslToString(interpolateHSL(c1, c2, hFactor, sFactor, lFactor)),
-        hslToString(interpolateHSL(c1, c2, hFactor + gap, sFactor, lFactor - gap)),
-      ],
-      groupStyle: `transform: rotate(${rotation}deg) scale(${scale}); translateZ: 0;`,
-      animDuration: duration + "s",
+      path: path2D,
+      rotation: {
+        angle: Math.random() * 360,
+        speed: speed,
+      },
+      scale: ANIMATION_CONFIG.scale,
+      colors: [blobColors], // Each blob has its own color pair
     });
   }
 
   return blobs;
 };
 
-// Generate blobs using the optimized function
-const l = generateBlobs(8);
+// Canvas setup
+const canvasRef = ref<HTMLCanvasElement | null>(null);
+const blobs = ref<BlobData[]>([]);
+const animationId = ref<number | null>(null);
+const lastFrameTime = ref(performance.now());
 
-// Log pool size for debugging (only in development)
-if (process.env.NODE_ENV === "development") {
-  console.log(`🎨 Path Pool: ${pathPool.size()} unique paths cached`);
-}
+const render = (currentTime: number) => {
+  const canvas = canvasRef.value;
+  if (!canvas) {
+    console.warn("🎨 Canvas not available");
+    return;
+  }
 
-// Cleanup path pool on component unmount to prevent memory leaks
-onUnmounted(() => {
-  pathPool.clear();
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    console.warn("🎨 2D context not available");
+    return;
+  }
+
+  // Frame rate limiting
+  const targetFrameTime = 1000 / ANIMATION_CONFIG.frameRate;
+  const timeSinceLastFrame = currentTime - lastFrameTime.value;
+
+  if (timeSinceLastFrame < targetFrameTime) {
+    animationId.value = requestAnimationFrame(render);
+    return;
+  }
+
+  // Calculate delta time in seconds
+  const deltaSeconds = timeSinceLastFrame / 1000;
+  lastFrameTime.value = currentTime;
+
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Apply blur filter
+  ctx.filter = `blur(${ANIMATION_CONFIG.blurAmount}px)`;
+
+  // Render each blob
+  blobs.value.forEach((blob, index) => {
+    // Update rotation
+    blob.rotation.angle += blob.rotation.speed * deltaSeconds * 60; // 60 degrees per second base
+
+    // Get colors for this blob - each blob has its own color pair
+    const colors = blob.colors[0];
+
+    if (!colors) return;
+
+    // Create gradient directly
+    const gradient = ctx.createLinearGradient(-50, 50, 50, -50);
+    gradient.addColorStop(0, colors.a);
+    gradient.addColorStop(1, colors.b);
+
+    // Save context state
+    ctx.save();
+
+    // Transform to blob position
+    const percentage = (ANIMATION_CONFIG.blobCount - index) / ANIMATION_CONFIG.blobCount;
+    ctx.translate(-(canvas.width / 2) + canvas.width * percentage, canvas.height / 2);
+    ctx.rotate((blob.rotation.angle * Math.PI) / 180);
+    // Use direct scale values
+    ctx.scale(blob.scale, blob.scale);
+
+    // Set gradient and draw
+    ctx.fillStyle = gradient;
+    ctx.fill(blob.path);
+
+    // Restore context state
+    ctx.restore();
+  });
+
+  // Reset filter
+  ctx.filter = "none";
+
+  // Continue animation
+  animationId.value = requestAnimationFrame(render);
+};
+
+// Initialize component
+onMounted(() => {
+  // Generate blobs
+  blobs.value = generateBlobs();
+
+  // Set up canvas with fixed size
+  const canvas = canvasRef.value;
+  if (canvas) {
+    canvas.width = ANIMATION_CONFIG.canvasWidth;
+    canvas.height = ANIMATION_CONFIG.canvasHeight;
+  }
+
   if (process.env.NODE_ENV === "development") {
-    console.log("🎨 Path Pool cleared on component unmount");
+    console.log(`🎨 Canvas initialized with ${blobs.value.length} blobs`);
+    console.log("🎨 First blob data:", blobs.value[0]);
+    console.log("🎨 Fixed canvas size:", ANIMATION_CONFIG.canvasWidth, "x", ANIMATION_CONFIG.canvasHeight);
+  }
+
+  // Start animation
+  animationId.value = requestAnimationFrame(render);
+});
+
+// Cleanup on component unmount
+onUnmounted(() => {
+  // Stop animation
+  if (animationId.value) {
+    cancelAnimationFrame(animationId.value);
+  }
+
+  // Clear caches
+  path2DPool.clear();
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("🎨 Canvas cleaned up on component unmount");
   }
 });
 </script>
 
 <template>
-  <svg preserveAspectRatio="xMidYMid slice" viewBox="0 0 100 100" class="w-full h-full -z-20 blur-xl">
-    <defs>
-      <linearGradient
-        v-for="(item, index) in l"
-        :key="'gradient' + index"
-        :id="'gradient' + index"
-        x1="0"
-        x2="1"
-        y1="1"
-        y2="0"
-      >
-        <stop id="stop1" :stop-color="item.colors[0]" offset="0%"></stop>
-        <stop id="stop2" :stop-color="item.colors[1]" offset="100%"></stop>
-      </linearGradient>
-    </defs>
-    <g v-for="(item, index) in l" :key="'path' + index" :style="item.groupStyle" class="transform-gpu">
-      <path
-        :fill="`url(#${'gradient' + index})`"
-        class="animate-spin transform-gpu"
-        :style="`animation-duration: ${item.animDuration}`"
-        :d="item.path"
-        width="100%"
-        height="100%"
-        :stroke="`url(#gradient${index})`"
-      ></path>
-    </g>
-  </svg>
+  <div class="w-full h-full -z-20 absolute overflow-hidden">
+    <canvas
+      ref="canvasRef"
+      class="block"
+      :style="{
+        background: blobs.length > 0 && blobs[0].colors.length > 0 ? blobs[0].colors[0].b || '#000' : '#000',
+        width: '100%',
+        height: '100%',
+      }"
+    />
+  </div>
 </template>
 
 <style scoped>
-@keyframes rotate {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: rotate linear infinite;
-}
-
-body {
-  filter: blur(200px);
-}
-
-svg {
+canvas {
   position: fixed;
   top: 0;
   left: 0;
