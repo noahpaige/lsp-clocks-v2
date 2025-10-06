@@ -9,6 +9,7 @@ type hslColor = {
 
 type BlobData = {
   path: Path2D;
+  offsetY: number;
   rotation: {
     angle: number;
     speed: number;
@@ -56,27 +57,31 @@ const path2DPool = new Path2DPool();
 
 // Animation configuration
 const ANIMATION_CONFIG = {
-  blobCount: 4,
+  blobCount: 8,
   canvasWidth: 1920, // Fixed canvas width
   canvasHeight: 1080, // Fixed canvas height
+  renderSize: 32, // Small offscreen canvas size for performance
   frameRate: 60,
-  blurAmount: 40,
+  blurAmount: 2,
+  maxOffsetY: 0.125,
   speedRange: {
-    min: 0.3,
-    max: 0.5,
+    min: 0.05,
+    max: 0.2,
   },
-  scale: 32, // Uniform scale for all blobs
+  scale: 1 / 100, // svg paths are 100px radius so we scale by 1/100 to normalize them to canvas space
 } as const;
 
 // Helper function to convert HSL object to CSS string
 function hslToString(hsl: hslColor) {
   return `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
 }
+// SVG paths scaled to 100px radius for clean 5.12x scaling (512/100)
+// Original paths were ~40px radius, scaled by factor of 2.5 (100/40)
 const paths = [
-  "M25.7,-30.2C32.4,-25.1,36.2,-16.1,38.3,-6.4C40.3,3.2,40.6,13.4,36.8,22.3C32.9,31.3,25,39,15.5,42.2C6.1,45.4,-4.8,44.2,-13.5,39.8C-22.3,35.5,-29,28,-33.3,19.7C-37.6,11.3,-39.6,2,-38.7,-7.5C-37.8,-17,-34.1,-26.6,-27.2,-31.7C-20.3,-36.7,-10.1,-37.3,-0.3,-36.9C9.5,-36.6,19.1,-35.3,25.7,-30.2Z",
-  "M22.4,-27.2C29.7,-20.7,36.6,-14.2,37.9,-6.7C39.1,0.7,34.7,9.1,29.7,16.4C24.6,23.8,18.9,30,11.9,32.5C4.9,35,-3.5,33.7,-11.7,31.1C-19.9,28.5,-28,24.7,-33.6,17.9C-39.2,11.2,-42.3,1.6,-40.4,-6.8C-38.5,-15.2,-31.6,-22.3,-24.1,-28.8C-16.5,-35.3,-8.2,-41.1,-0.3,-40.7C7.6,-40.3,15.2,-33.8,22.4,-27.2Z",
-  "M23.1,-27.4C28.5,-23,30.4,-14.4,31,-6.1C31.6,2.1,31.1,9.8,27.6,16C24.1,22.1,17.7,26.5,10,30.9C2.3,35.2,-6.8,39.3,-14.7,37.6C-22.7,36,-29.5,28.5,-33.2,20.1C-36.9,11.8,-37.5,2.5,-36.1,-6.6C-34.8,-15.8,-31.7,-24.9,-25.3,-29.1C-19,-33.3,-9.5,-32.6,-0.3,-32.3C8.9,-31.9,17.7,-31.8,23.1,-27.4Z",
-  "M26.6,-30.6C33.8,-25.6,38.7,-16.6,39.7,-7.5C40.8,1.7,38,11,33.4,19.6C28.8,28.2,22.4,36.1,13.9,39.9C5.4,43.7,-5.2,43.5,-14.3,39.9C-23.4,36.3,-31,29.3,-33.6,21.2C-36.2,13,-33.8,3.8,-31,-4.4C-28.3,-12.5,-25.3,-19.5,-20,-24.8C-14.8,-30.2,-7.4,-33.9,1.1,-35.2C9.7,-36.6,19.3,-35.6,26.6,-30.6Z",
+  "M64.25,-75.5C81,-62.75,90.5,-40.25,95.75,-16C100.75,8,101.5,33.5,92,55.75C82.25,78.25,62.5,97.5,38.75,105.5C15.25,113.5,-12,110.5,-33.75,99.5C-55.75,88.75,-72.5,70,-83.25,49.25C-94,28.25,-99,5,-96.75,-18.75C-94.5,-42.5,-85.25,-66.5,-68,-79.25C-50.75,-91.75,-25.25,-93.25,-0.75,-92.25C23.75,-91.5,47.75,-88.25,64.25,-75.5Z",
+  "M56,-68C74.25,-51.75,91.5,-35.5,94.75,-16.75C97.75,1.75,86.75,22.75,74.25,41C61.5,59.5,47.25,75,29.75,81.25C12.25,87.5,-8.75,84.25,-29.25,77.75C-49.75,71.25,-70,79,-84,44.75C-98,28,-105.75,4,-101,-17C-96.25,-38,-78,-55.75,-60.25,-72C-41.25,-88.25,-20.5,-102.75,-0.75,-101.75C19,-100.75,38,-83.25,56,-68Z",
+  "M57.75,-68.5C71.25,-57.5,76,-36,77.5,-15.25C79,5.25,77.75,24.5,69,40C60.25,55.25,44.25,66.25,25,77.25C5.75,88,-17,98.25,-36.75,94C-56.75,90,-72.5,71.25,-83,50.25C-92.25,29.5,-93.75,6.25,-90.25,-16.5C-87,-39.5,-79.25,-62.25,-63.25,-72.75C-47.5,-83.25,-23.75,-81.5,-0.75,-80.75C22.25,-79.75,44.25,-79.5,57.75,-68.5Z",
+  "M66.5,-76.5C84.5,-64,96.75,-41.5,99.25,-18.75C102,4.25,95,27.5,83.5,49C72,70.5,56,90.25,34.75,99.75C13.5,109.25,-13,108.75,-35.75,99.75C-58.5,90.75,-77.5,73.25,-84,53C-90.5,32.5,-84.5,9.5,-77.5,-11C-70.75,-31.25,-63.25,-48.75,-50,-62C-37,-75.5,-18.5,-84.75,2.75,-88C24,-90.5,48.25,-89,66.5,-76.5Z",
 ];
 
 const c1 = { h: 221, s: 105, l: 22 };
@@ -107,6 +112,7 @@ const generateBlobs = (): BlobData[] => {
 
     blobs.push({
       path: path2D,
+      offsetY: (Math.random() * 2 - 1) * ANIMATION_CONFIG.renderSize * ANIMATION_CONFIG.maxOffsetY,
       rotation: {
         angle: Math.random() * 360,
         speed: speed,
@@ -125,6 +131,10 @@ const blobs = ref<BlobData[]>([]);
 const animationId = ref<number | null>(null);
 const lastFrameTime = ref(performance.now());
 
+// Offscreen canvas for performance optimization
+let offscreenCanvas: HTMLCanvasElement | null = null;
+let offscreenCtx: CanvasRenderingContext2D | null = null;
+
 const render = (currentTime: number) => {
   const canvas = canvasRef.value;
   if (!canvas) {
@@ -135,6 +145,12 @@ const render = (currentTime: number) => {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     console.warn("🎨 2D context not available");
+    return;
+  }
+
+  // Ensure offscreen canvas is available
+  if (!offscreenCanvas || !offscreenCtx) {
+    console.warn("🎨 Offscreen canvas not available");
     return;
   }
 
@@ -151,13 +167,13 @@ const render = (currentTime: number) => {
   const deltaSeconds = timeSinceLastFrame / 1000;
   lastFrameTime.value = currentTime;
 
-  // Clear canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Clear offscreen canvas
+  offscreenCtx.clearRect(0, 0, ANIMATION_CONFIG.renderSize, ANIMATION_CONFIG.renderSize);
 
-  // Apply blur filter
-  ctx.filter = `blur(${ANIMATION_CONFIG.blurAmount}px)`;
+  // Apply blur filter to offscreen canvas
+  offscreenCtx.filter = `blur(${ANIMATION_CONFIG.blurAmount}px)`;
 
-  // Render each blob
+  // Render each blob on offscreen canvas
   blobs.value.forEach((blob, index) => {
     // Update rotation
     blob.rotation.angle += blob.rotation.speed * deltaSeconds * 60; // 60 degrees per second base
@@ -167,31 +183,53 @@ const render = (currentTime: number) => {
 
     if (!colors) return;
 
-    // Create gradient directly
-    const gradient = ctx.createLinearGradient(-50, 50, 50, -50);
+    // Create gradient for offscreen canvas
+    const gradient = offscreenCtx.createLinearGradient(
+      -(ANIMATION_CONFIG.renderSize / 2),
+      ANIMATION_CONFIG.renderSize / 2,
+      ANIMATION_CONFIG.renderSize / 2,
+      -(ANIMATION_CONFIG.renderSize / 2)
+    );
     gradient.addColorStop(0, colors.a);
     gradient.addColorStop(1, colors.b);
 
-    // Save context state
-    ctx.save();
+    // Save offscreen context state
+    offscreenCtx.save();
 
-    // Transform to blob position
-    const percentage = (ANIMATION_CONFIG.blobCount - index) / ANIMATION_CONFIG.blobCount;
-    ctx.translate(-(canvas.width / 2) + canvas.width * percentage, canvas.height / 2);
-    ctx.rotate((blob.rotation.angle * Math.PI) / 180);
-    // Use direct scale values
-    ctx.scale(blob.scale, blob.scale);
+    // Transform to blob position on offscreen canvas
+    const percentage = (ANIMATION_CONFIG.blobCount - index + 1) / ANIMATION_CONFIG.blobCount;
 
-    // Set gradient and draw
-    ctx.fillStyle = gradient;
-    ctx.fill(blob.path);
+    // Blob radius equals renderSize (512px)
+    const blobRadius = ANIMATION_CONFIG.renderSize;
 
-    // Restore context state
-    ctx.restore();
+    // SVG paths are 100px radius, so scale factor is renderSize/100
+    const scaleFactor = blobRadius * ANIMATION_CONFIG.scale;
+    const start = -blobRadius;
+
+    // Use radius to compute offscreenX offset
+    const offscreenX = start + percentage * blobRadius;
+    const offscreenY = ANIMATION_CONFIG.renderSize / 2 + blob.offsetY;
+
+    offscreenCtx.translate(offscreenX, offscreenY);
+    offscreenCtx.rotate((blob.rotation.angle * Math.PI) / 180);
+
+    // Scale by factor to make 100px radius paths fit 512px radius
+    offscreenCtx.scale(scaleFactor, scaleFactor);
+
+    // Set gradient and draw on offscreen canvas
+    offscreenCtx.fillStyle = gradient;
+    offscreenCtx.fill(blob.path);
+
+    // Restore offscreen context state
+    offscreenCtx.restore();
   });
 
-  // Reset filter
-  ctx.filter = "none";
+  // Reset filter on offscreen canvas
+  offscreenCtx.filter = "none";
+
+  // Clear main canvas and draw scaled offscreen canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(offscreenCanvas, 0, 0, canvas.width, canvas.height);
 
   // Continue animation
   animationId.value = requestAnimationFrame(render);
@@ -202,17 +240,36 @@ onMounted(() => {
   // Generate blobs
   blobs.value = generateBlobs();
 
-  // Set up canvas with fixed size
+  // Set up main canvas with fixed size
   const canvas = canvasRef.value;
   if (canvas) {
     canvas.width = ANIMATION_CONFIG.canvasWidth;
     canvas.height = ANIMATION_CONFIG.canvasHeight;
   }
 
+  // Create offscreen canvas for performance optimization
+  offscreenCanvas = document.createElement("canvas");
+  offscreenCanvas.width = ANIMATION_CONFIG.renderSize;
+  offscreenCanvas.height = ANIMATION_CONFIG.renderSize;
+  offscreenCtx = offscreenCanvas.getContext("2d");
+
+  if (!offscreenCtx) {
+    console.error("🎨 Failed to get offscreen 2D context");
+    return;
+  }
+
   if (process.env.NODE_ENV === "development") {
     console.log(`🎨 Canvas initialized with ${blobs.value.length} blobs`);
     console.log("🎨 First blob data:", blobs.value[0]);
-    console.log("🎨 Fixed canvas size:", ANIMATION_CONFIG.canvasWidth, "x", ANIMATION_CONFIG.canvasHeight);
+    console.log("🎨 Main canvas size:", ANIMATION_CONFIG.canvasWidth, "x", ANIMATION_CONFIG.canvasHeight);
+    console.log("🎨 Offscreen canvas size:", ANIMATION_CONFIG.renderSize, "x", ANIMATION_CONFIG.renderSize);
+    console.log(
+      "🎨 Performance improvement: Rendering",
+      ANIMATION_CONFIG.renderSize * ANIMATION_CONFIG.renderSize,
+      "pixels instead of",
+      ANIMATION_CONFIG.canvasWidth * ANIMATION_CONFIG.canvasHeight,
+      "pixels"
+    );
   }
 
   // Start animation
@@ -228,6 +285,10 @@ onUnmounted(() => {
 
   // Clear caches
   path2DPool.clear();
+
+  // Clean up offscreen canvas
+  offscreenCanvas = null;
+  offscreenCtx = null;
 
   if (process.env.NODE_ENV === "development") {
     console.log("🎨 Canvas cleaned up on component unmount");
