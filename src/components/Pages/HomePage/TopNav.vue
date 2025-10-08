@@ -48,13 +48,12 @@ const onClickSettings = () => {
 </script>
 
 <template>
-  <div class="flex items-center justify-between border-b p-2">
-    <div class="flex items-center gap-4">
-      <div class="flex items-center">
-        <Clock class="bg-slate-300 text-black rounded-full w-8 h-8 mt-1" />
-        <div class="text-4xl text-slate-300 font-bold ml-2">LSP Clocks</div>
+  <div class="flex items-center justify-between border-b h-14">
+    <div class="flex items-center gap-4 self-stretch">
+      <div class="flex items-center px-4 border-r self-stretch">
+        <Clock class="bg-slate-300 text-black rounded-full w-7 h-7 mt-1" />
+        <div class="text-3xl text-slate-300 font-bold ml-2">LSP Clocks</div>
       </div>
-      <Separator orientation="vertical" class="h-14 -my-6" />
       <NavigationMenu>
         <NavigationMenuList>
           <NavigationMenuItem v-for="(item, key) in navItems" :key="key">
@@ -62,7 +61,7 @@ const onClickSettings = () => {
               :href="item.href"
               :class="[
                 navigationMenuTriggerStyle(),
-                selectedHref === item.href ? 'bg-accent/50 text-accent-foreground scale-105' : 'text-foreground/60',
+                selectedHref === item.href ? 'text-accent-foreground scale-105' : 'text-foreground/60',
               ]"
             >
               {{ item.name }}
@@ -71,8 +70,7 @@ const onClickSettings = () => {
         </NavigationMenuList>
       </NavigationMenu>
     </div>
-    <div class="flex items-center">
-      <Separator orientation="vertical" class="h-14 -my-6 mr-2" />
+    <div class="flex items-center border-l self-stretch px-4">
       <Button variant="ghost" @click="onClickSettings"><Settings /> </Button>
     </div>
   </div>
