@@ -156,6 +156,7 @@ import { cn } from "@/lib/utils";
 import { ref, watch } from "vue";
 import { timeToArr } from "./utils";
 
+// the interface definition in ClockConfig.ts must include all these props (minus 'time' prop). If you change one, then you must change the other.
 const props = defineProps({
   labelLeft: {
     type: String,
