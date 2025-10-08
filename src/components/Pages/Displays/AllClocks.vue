@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import Clock from "@/components/Clock/Clock.vue";
 import AnimatedBackground4 from "@/components/AnimatedBackground4.vue";
-import AnimatedBackground6 from "@/components/AnimatedBackground6.vue";
 import { reactive } from "vue";
 import { useRedisObserver } from "@/composables/useRedisObserver";
 import { ClockDataType, parseClockData } from "@/types/ClockData";
