@@ -46,9 +46,50 @@ const routes = [
   },
   {
     path: "/config",
-    name: "Config",
     component: ConfigPage,
-    meta: { showTopNav: true },
+    meta: { showTopNav: false },
+    children: [
+      {
+        path: "",
+        redirect: "/config/application-settings",
+      },
+      {
+        path: "application-settings",
+        name: "config-application-settings",
+        component: () => import("@/components/Pages/ConfigPage/views/general/ApplicationSettings.vue"),
+        meta: { showTopNav: true, title: "Application Settings", category: "general" },
+      },
+      {
+        path: "display-configs",
+        name: "config-display-configs",
+        component: () => import("@/components/Pages/ConfigPage/views/displays/DisplayConfigsList.vue"),
+        meta: { showTopNav: true, title: "Display Configurations", category: "displays" },
+      },
+      {
+        path: "display-configs/create",
+        name: "config-display-config-create",
+        component: () => import("@/components/Pages/ConfigPage/views/displays/DisplayConfigEditor.vue"),
+        meta: { showTopNav: true, title: "Create Display Config", category: "displays" },
+      },
+      {
+        path: "display-configs/:id/edit",
+        name: "config-display-config-edit",
+        component: () => import("@/components/Pages/ConfigPage/views/displays/DisplayConfigEditor.vue"),
+        meta: { showTopNav: true, title: "Edit Display Config", category: "displays" },
+      },
+      {
+        path: "theme",
+        name: "config-theme",
+        component: () => import("@/components/Pages/ConfigPage/views/appearance/ThemeSettings.vue"),
+        meta: { showTopNav: true, title: "Theme Settings", category: "appearance" },
+      },
+      {
+        path: "notifications",
+        name: "config-notifications",
+        component: () => import("@/components/Pages/ConfigPage/views/notifications/NotificationSettings.vue"),
+        meta: { showTopNav: true, title: "Notification Settings", category: "notifications" },
+      },
+    ],
   },
   {
     path: "/display-controller",

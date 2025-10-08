@@ -1,66 +1,38 @@
 <script setup>
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { computed } from "vue";
+import { useRoute } from "vue-router";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import ConfigSidebar from "./ConfigSidebar.vue";
+
+const route = useRoute();
+
+const currentPageTitle = computed(() => {
+  return route.meta.title || "Configuration";
+});
 </script>
 
 <template>
-  <div class="">
-    <div class="flex flex-col p-6 w-full gap-6 max-w-4xl mx-auto">
-      <h1 class="text-5xl font-bold">Configuration</h1>
-    </div>
-
-    <div class="flex flex-col p-6 w-full gap-6 max-w-4xl mx-auto">
-      <Tabs default-value="account" class="w-[400px]">
-        <TabsList class="grid w-full grid-cols-2">
-          <TabsTrigger value="account"> Account </TabsTrigger>
-          <TabsTrigger value="password"> Password </TabsTrigger>
-        </TabsList>
-        <TabsContent value="account">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account</CardTitle>
-              <CardDescription> Make changes to your account here. Click save when you're done. </CardDescription>
-            </CardHeader>
-            <CardContent class="space-y-2">
-              <div class="space-y-1">
-                <Label for="name">Name</Label>
-                <Input id="name" default-value="Pedro Duarte" />
-              </div>
-              <div class="space-y-1">
-                <Label for="username">Username</Label>
-                <Input id="username" default-value="@peduarte" />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button>Save changes</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        <TabsContent value="password">
-          <Card>
-            <CardHeader>
-              <CardTitle>Password</CardTitle>
-              <CardDescription> Change your password here. After saving, you'll be logged out. </CardDescription>
-            </CardHeader>
-            <CardContent class="space-y-2">
-              <div class="space-y-1">
-                <Label for="current">Current password</Label>
-                <Input id="current" type="password" />
-              </div>
-              <div class="space-y-1">
-                <Label for="new">New password</Label>
-                <Input id="new" type="password" />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button>Save password</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+  <div class="flex w-full config-layout" style="height: calc(100vh - 56px)">
+    <SidebarProvider :default-open="true">
+      <ConfigSidebar />
+      <main class="flex-1 overflow-auto">
+        <div class="border-b h-14 flex items-center px-6 gap-4 sticky top-0 bg-background z-10">
+          <SidebarTrigger />
+          <h1 class="text-2xl font-semibold">{{ currentPageTitle }}</h1>
+        </div>
+        <div class="p-6">
+          <RouterView />
+        </div>
+      </main>
+    </SidebarProvider>
   </div>
 </template>
+
+<style scoped>
+.config-layout :deep(.duration-200.fixed.inset-y-0) {
+  position: absolute !important;
+  top: 56px !important;
+  bottom: 0 !important;
+  height: calc(100vh - 56px) !important;
+}
+</style>
