@@ -8,7 +8,6 @@ import { Settings, Clock } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
 import { useWindowManager } from "@/composables/WindowManager/useWindowManager";
-import TopNav from "./TopNav.vue";
 import Badge from "@/components/ui/badge/Badge.vue";
 
 const router = useRouter();
@@ -47,8 +46,6 @@ const closeDisplay = (item) => {
 
 <template>
   <div class="">
-    <TopNav />
-
     <div class="flex flex-col p-3 w-full gap-2">
       <Input v-model="searchQuery" placeholder="Search..." class="w-40" />
 

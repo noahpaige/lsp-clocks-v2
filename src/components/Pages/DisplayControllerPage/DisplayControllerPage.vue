@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useWindowManager } from "@/composables/WindowManager/useWindowManager";
 import { useRouter } from "vue-router";
-import TopNav from "../HomePage/TopNav.vue";
 
 const router = useRouter();
 const { openWindow, closeWindow } = useWindowManager();
@@ -51,8 +50,6 @@ const launchAllDisplays = () => {
 
 <template>
   <div class="">
-    <TopNav />
-
     <div class="flex flex-col p-6 w-full gap-6">
       <div class="flex justify-between items-center">
         <div>

@@ -1,78 +1,66 @@
 <script setup>
-import { ref } from "vue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import TopNav from "../HomePage/TopNav.vue";
-
-// Configuration settings
-const serverUrl = ref("http://localhost:3000");
-const refreshRate = ref("5");
-const enableNotifications = ref(true);
-const maxWindows = ref("10");
-
-const saveConfig = () => {
-  console.log("Configuration saved:", {
-    serverUrl: serverUrl.value,
-    refreshRate: refreshRate.value,
-    enableNotifications: enableNotifications.value,
-    maxWindows: maxWindows.value,
-  });
-  // Add your save logic here
-};
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 </script>
 
 <template>
   <div class="">
-    <TopNav />
+    <div class="flex flex-col p-6 w-full gap-6 max-w-4xl mx-auto">
+      <h1 class="text-5xl font-bold">Configuration</h1>
+    </div>
 
     <div class="flex flex-col p-6 w-full gap-6 max-w-4xl mx-auto">
-      <div>
-        <h1 class="text-3xl font-bold">Configuration</h1>
-        <p class="text-muted-foreground mt-2">Manage your application settings</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>General Settings</CardTitle>
-          <CardDescription>Configure general application preferences</CardDescription>
-        </CardHeader>
-        <CardContent class="space-y-4">
-          <div class="space-y-2">
-            <Label for="server-url">Server URL</Label>
-            <Input id="server-url" v-model="serverUrl" placeholder="http://localhost:3000" />
-          </div>
-
-          <div class="space-y-2">
-            <Label for="refresh-rate">Refresh Rate (seconds)</Label>
-            <Input id="refresh-rate" v-model="refreshRate" type="number" placeholder="5" />
-          </div>
-
-          <div class="space-y-2">
-            <Label for="max-windows">Max Windows</Label>
-            <Input id="max-windows" v-model="maxWindows" type="number" placeholder="10" />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Display Settings</CardTitle>
-          <CardDescription>Configure display and window preferences</CardDescription>
-        </CardHeader>
-        <CardContent class="space-y-4">
-          <div class="flex items-center space-x-2">
-            <input id="notifications" type="checkbox" v-model="enableNotifications" class="h-4 w-4" />
-            <Label for="notifications">Enable Notifications</Label>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div class="flex gap-2">
-        <Button @click="saveConfig">Save Changes</Button>
-        <Button variant="outline">Reset to Defaults</Button>
-      </div>
+      <Tabs default-value="account" class="w-[400px]">
+        <TabsList class="grid w-full grid-cols-2">
+          <TabsTrigger value="account"> Account </TabsTrigger>
+          <TabsTrigger value="password"> Password </TabsTrigger>
+        </TabsList>
+        <TabsContent value="account">
+          <Card>
+            <CardHeader>
+              <CardTitle>Account</CardTitle>
+              <CardDescription> Make changes to your account here. Click save when you're done. </CardDescription>
+            </CardHeader>
+            <CardContent class="space-y-2">
+              <div class="space-y-1">
+                <Label for="name">Name</Label>
+                <Input id="name" default-value="Pedro Duarte" />
+              </div>
+              <div class="space-y-1">
+                <Label for="username">Username</Label>
+                <Input id="username" default-value="@peduarte" />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button>Save changes</Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        <TabsContent value="password">
+          <Card>
+            <CardHeader>
+              <CardTitle>Password</CardTitle>
+              <CardDescription> Change your password here. After saving, you'll be logged out. </CardDescription>
+            </CardHeader>
+            <CardContent class="space-y-2">
+              <div class="space-y-1">
+                <Label for="current">Current password</Label>
+                <Input id="current" type="password" />
+              </div>
+              <div class="space-y-1">
+                <Label for="new">New password</Label>
+                <Input id="new" type="password" />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button>Save password</Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   </div>
 </template>
