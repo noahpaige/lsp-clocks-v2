@@ -12,7 +12,7 @@
   "dependencies": {
     "@radix-icons/vue": "^1.0.0",
     "@tanstack/vue-table": "^8.20.5",
-    "@vueuse/core": "^12.7.0",
+    "@vueuse/core": "^12.8.2",
     "autoprefixer": "^10.4.20",
     "broadcast-channel": "^7.0.0",
     "class-variance-authority": "^0.7.1",
@@ -24,7 +24,7 @@
     "mitt": "^3.0.1",
     "radix-vue": "^1.9.11",
     "redis": "^4.7.0",
-    "reka-ui": "^2.2.0",
+    "reka-ui": "^2.5.1",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
