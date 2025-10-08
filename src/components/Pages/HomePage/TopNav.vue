@@ -71,7 +71,7 @@ const onClickSettings = () => {
       </NavigationMenu>
     </div>
     <div class="flex items-center border-l self-stretch px-4">
-      <Button variant="ghost" @click="onClickSettings"><Settings /> </Button>
+      <Button variant="ghost" class="w-8 h-8" @click="onClickSettings"><Settings /> </Button>
     </div>
   </div>
 </template>
