@@ -20,10 +20,10 @@ const showTopNav = computed(() => {
 </script>
 
 <template>
-  <div :class="showTopNav ? 'h-screen bg-background' : ''">
+  <div :class="showTopNav ? 'bg-background' : ''">
     <Toaster closeButton />
-    <TopNav v-if="showTopNav" class="sticky top-0 z-50 flex-shrink-0" />
-    <main class="absolute w-full h-full">
+    <TopNav v-if="showTopNav" class="fixed top-0 left-0 right-0 z-50" />
+    <main :class="showTopNav ? 'pt-14' : ''">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
