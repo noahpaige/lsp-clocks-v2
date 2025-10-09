@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes, Ref } from "vue";
 import { defaultDocument, useEventListener, useMediaQuery, useVModel } from "@vueuse/core";
-import { TooltipProvider } from "reka-ui";
 import { computed, ref } from "vue";
 import { cn } from "@/lib/utils";
 import {
@@ -76,16 +75,14 @@ provideSidebarContext({
 </script>
 
 <template>
-  <TooltipProvider :delay-duration="0">
-    <div
-      :style="{
-        '--sidebar-width': SIDEBAR_WIDTH,
-        '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
-      }"
-      :class="cn('group/sidebar-wrapper flex min-h-full w-full has-[[data-variant=inset]]:bg-sidebar', props.class)"
-      v-bind="$attrs"
-    >
-      <slot />
-    </div>
-  </TooltipProvider>
+  <div
+    :style="{
+      '--sidebar-width': SIDEBAR_WIDTH,
+      '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
+    }"
+    :class="cn('group/sidebar-wrapper flex min-h-full w-full has-[[data-variant=inset]]:bg-sidebar', props.class)"
+    v-bind="$attrs"
+  >
+    <slot />
+  </div>
 </template>

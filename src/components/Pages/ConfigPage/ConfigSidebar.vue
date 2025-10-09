@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
-import { Settings, Monitor, Palette, Bell } from "lucide-vue-next";
+import { Settings, Monitor, Palette, Bell, ChevronDown, ChevronRight, X } from "lucide-vue-next";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +15,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const route = useRoute();
@@ -88,29 +89,46 @@ const filteredSections = computed(() => {
 const isActive = (path) => {
   return route.path === path;
 };
+
+// Clear search query
+const clearSearch = () => {
+  searchQuery.value = "";
+};
 </script>
 
 <template>
   <Sidebar>
-    <SidebarHeader class="border-b p-4">
+    <SidebarHeader class="px-3">
       <!-- Spacer to account for TopNav height -->
       <div class="h-14"></div>
-      <div class="flex items-center gap-2 mb-3">
-        <Settings class="h-5 w-5" />
-        <h2 class="font-semibold text-lg">Configuration</h2>
+
+      <div class="relative">
+        <Input v-model="searchQuery" placeholder="Search config pages..." class="h-9 pr-9" />
+        <Button
+          v-if="searchQuery"
+          variant="ghost"
+          size="icon"
+          class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+          @click="clearSearch"
+        >
+          <X class="h-4 w-4" />
+        </Button>
       </div>
-      <Input v-model="searchQuery" placeholder="Search settings..." class="h-9" />
     </SidebarHeader>
     <SidebarContent>
-      <SidebarGroup v-for="section in filteredSections" :key="section.label" class="px-2">
-        <Collapsible :default-open="true" class="group/collapsible">
+      <SidebarGroup v-for="section in filteredSections" :key="section.label" class="px-2 py-0">
+        <Collapsible :default-open="false" class="group">
           <CollapsibleTrigger as-child>
-            <SidebarGroupLabel class="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-2">
-              {{ section.label }}
+            <SidebarGroupLabel
+              class="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-2 flex items-center justify-between text-md font-normal text-sidebar-foreground"
+            >
+              <span>{{ section.label }}</span>
+              <ChevronDown class="h-4 w-4 transition-transform duration-200 group-data-[state=closed]:hidden" />
+              <ChevronRight class="h-4 w-4 transition-transform duration-200 group-data-[state=open]:hidden" />
             </SidebarGroupLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <SidebarGroupContent>
+            <SidebarGroupContent class="ml-4 border-l border-sidebar-border pl-4 w-[calc(100%-16px)] pt-1">
               <SidebarMenu>
                 <SidebarMenuItem v-for="item in section.items" :key="item.path">
                   <SidebarMenuButton as-child :is-active="isActive(item.path)">
