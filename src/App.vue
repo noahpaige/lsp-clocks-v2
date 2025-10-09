@@ -20,14 +20,16 @@ const showTopNav = computed(() => {
 </script>
 
 <template>
-  <div :class="showTopNav ? 'min-h-screen bg-background' : ''">
+  <div :class="showTopNav ? 'h-screen bg-background' : ''">
     <Toaster closeButton />
-    <TopNav v-if="showTopNav" />
-    <router-view v-slot="{ Component }">
-      <transition name="fade" mode="out-in">
-        <component :is="Component" />
-      </transition>
-    </router-view>
+    <TopNav v-if="showTopNav" class="sticky top-0 z-50 flex-shrink-0" />
+    <main class="absolute w-full h-full">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </main>
   </div>
 </template>
 
