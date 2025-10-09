@@ -35,6 +35,17 @@ const navItems = {
 
 // Store the href of the currently selected nav item (set once on component load)
 const selectedHref = route.path;
+console.log(selectedHref);
+
+// Helper function to determine if a nav item is selected
+const isNavItemSelected = (itemHref) => {
+  // For home, use exact match to avoid matching all routes
+  if (itemHref === "/") {
+    return selectedHref === "/";
+  }
+  // For other routes, check if the current path starts with the item href
+  return selectedHref === itemHref || selectedHref.startsWith(itemHref + "/");
+};
 
 const { emitToast } = useToaster();
 
@@ -61,7 +72,7 @@ const onClickSettings = () => {
               :href="item.href"
               :class="[
                 navigationMenuTriggerStyle(),
-                selectedHref === item.href ? 'text-accent-foreground scale-105' : 'text-foreground/60',
+                isNavItemSelected(item.href) ? 'text-accent-foreground scale-105' : 'text-foreground/60',
               ]"
             >
               {{ item.name }}
