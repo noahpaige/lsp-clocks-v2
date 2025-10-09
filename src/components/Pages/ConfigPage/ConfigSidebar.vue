@@ -93,6 +93,8 @@ const isActive = (path) => {
 <template>
   <Sidebar>
     <SidebarHeader class="border-b p-4">
+      <!-- Spacer to account for TopNav height -->
+      <div class="h-14"></div>
       <div class="flex items-center gap-2 mb-3">
         <Settings class="h-5 w-5" />
         <h2 class="font-semibold text-lg">Configuration</h2>
