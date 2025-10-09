@@ -47,7 +47,7 @@ const routes = [
   {
     path: "/config",
     component: ConfigPage,
-    meta: { showTopNav: false },
+    meta: { showTopNav: true },
     children: [
       {
         path: "",
