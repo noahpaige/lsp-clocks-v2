@@ -9,6 +9,10 @@ const route = useRoute();
 const currentPageTitle = computed(() => {
   return route.meta.title || "Configuration";
 });
+
+const currentPageDescription = computed(() => {
+  return route.meta.description || "";
+});
 </script>
 
 <template>
@@ -18,9 +22,12 @@ const currentPageTitle = computed(() => {
       <div
         class="flex-1 ml-0 transition-[margin-left] ease-linear group-data-[collapsible=offcanvas]:ml-0 group-data-[collapsible=icon]:ml-[--sidebar-width-icon] group-data-[collapsible=sidebar]:ml-[--sidebar-width]"
       >
-        <div class="sticky top-14 border-b h-14 flex items-center px-6 gap-4 bg-background z-10">
-          <SidebarTrigger />
-          <h1 class="text-xl font-semibold">{{ currentPageTitle }}</h1>
+        <div class="sticky flex items-center px-6 gap-4 inset-shadow-2xl">
+          <SidebarTrigger size="2xl" />
+          <div class="flex flex-col py-4 gap-2">
+            <h1 class="text-3xl font-bold">{{ currentPageTitle }}</h1>
+            <p class="text-sm text-muted-foreground">{{ currentPageDescription }}</p>
+          </div>
         </div>
         <div class="p-6">
           <RouterView />
