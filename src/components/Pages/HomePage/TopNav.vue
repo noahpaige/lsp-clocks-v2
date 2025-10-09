@@ -48,7 +48,7 @@ const onClickSettings = () => {
 </script>
 
 <template>
-  <div class="flex items-center justify-between border-b h-14">
+  <div class="flex items-center justify-between border-b h-14 bg-background">
     <div class="flex items-center gap-4 self-stretch">
       <div class="flex items-center px-4 border-r self-stretch">
         <Clock class="bg-slate-300 text-black rounded-full w-7 h-7 mt-1" />
