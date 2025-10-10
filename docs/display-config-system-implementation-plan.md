@@ -1188,6 +1188,13 @@ function getTotalClocks(config: any) {
 - [ ] All buttons navigate/trigger correctly
 - [ ] Table displays config data properly
 
+**Status (Oct 10, 2025):**
+
+- Implemented `DisplayConfigsList.vue` with search, table, and actions (create, edit, duplicate, delete, preview hook point).
+- Wired to `useDisplayConfigs` (`loadDisplayConfigs`, `deleteDisplayConfig`, `duplicateDisplayConfig`).
+- Routing to create/edit matches existing routes.
+- Preview modal stub controlled via `showPreview`/`previewConfigId` (component to be added in Phase 4.4).
+
 ---
 
 ### Phase 3: Generic Clock Display Component
@@ -1316,6 +1323,12 @@ function getClockTime(clock: any): number {
 - [ ] Clocks display correct data
 - [ ] Layout respects row configurations
 - [ ] Background animates correctly
+
+**Status (Oct 10, 2025):**
+
+- Implemented `src/components/Pages/Displays/GenericClockDisplay.vue` using `Clock.vue`, `AnimatedBackground4`, and `useRedisObserver`.
+- Label-to-data mapping added; consider explicit binding later as planned.
+- No deviations from the plan.
 
 ---
 
