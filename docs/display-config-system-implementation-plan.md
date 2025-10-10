@@ -381,6 +381,15 @@ export function useDisplayConfigs() {
 - [ ] Error handling includes user-friendly toasts
 - [ ] TypeScript types are correct
 
+**Status (Oct 10, 2025)**:
+
+- Implemented `src/composables/useDisplayConfigs.ts` with reactive state, CRUD, and Redis persistence.
+- Integrated with existing `useRedisCommand` API using `sendInstantCommand(command, key, args?)` to match current backend contract.
+- Used `useToaster().emitToast` for notifications (the plan referenced `showToast`), which is a slight deviation from the draft.
+- Parsing uses existing `parseClockDisplayConfig` from `src/types/ClockDisplayConfig.ts`.
+- Validation: duplicate ID check and required ID presence on create/update.
+- No versioning/locks yet (planned in later steps).
+
 ---
 
 #### Step 1.2: Create Generic Versioning Abstraction
@@ -471,6 +480,12 @@ export function parseVersioned<T>(raw: any, parser: (raw: any) => T): Versioned<
 - ✅ Explicit versioning via utility functions
 - ✅ Consistent pattern across entire codebase
 
+**Status (Oct 10, 2025):**
+
+- Implemented `src/types/Versioned.ts` providing `Versioned<T>`, `withVersion`, `updateVersion`, `withoutVersion`, and `parseVersioned`.
+- Matches the plan’s API; no deviations required.
+- Will be integrated into `useDisplayConfigs` in Step 1.7 for conflict detection.
+
 ---
 
 #### Step 1.3: Define Display Config Types with Versioning
@@ -482,6 +497,7 @@ Create a base interface for extensibility, then define clock-specific display co
 ```typescript
 import { ClockRowConfig, parseRowConfig } from "./ClockRowConfig";
 import { Versioned } from "./Versioned";
+import { BaseDisplayConfig } from "./BaseDisplayConfig";
 
 /**
  * Base display configuration interface
@@ -609,6 +625,12 @@ export function parseEditLock(raw: any): EditLock {
   };
 }
 ```
+
+**Status (Oct 10, 2025):**
+
+- Implemented `BaseDisplayConfig` (moved to `src/types/BaseDisplayConfig.ts`), `ClockDisplayConfig` (kept `type` optional for backward compatibility), `VersionedClockDisplayConfig`, and `DisplayConfig` union.
+- Added `parseClockDisplayConfig` and `parseVersionedClockDisplayConfig` that default `type` to `"clock-layout"` when missing.
+- Deviation: `type` is optional instead of required to avoid breaking existing code; plan assumed strict discriminator.
 
 ---
 
@@ -960,6 +982,29 @@ async function updateDisplayConfig(
 - [ ] Lock refresh works while editor is open
 - [ ] Version conflict detection works
 - [ ] Pattern is reusable for future data types
+
+**Status (Oct 10, 2025):**
+
+- Implemented `src/types/EditLock.ts` with `EditLock` and `parseEditLock` utilities.
+- No deviations from the plan.
+
+**Status (Oct 10, 2025):**
+
+- Implemented `src/composables/useSessionId.ts` with `initializeSession`, `setUserName`, and reactive getters.
+- No deviations from the plan.
+
+**Status (Oct 10, 2025):**
+
+- Implemented `src/composables/useEditLock.ts` with `acquireLock`, `releaseLock`, `checkLock`, and periodic refresh.
+- Uses `sendInstantCommand` with `SET key payload EX 300` to set/refresh TTL.
+- No deviations from the plan.
+
+**Status (Oct 10, 2025):**
+
+- Updated `useDisplayConfigs` to use `withVersion` on create and `updateVersion` on update.
+- Added `getVersionedDisplayConfig` and `updateDisplayConfigWithVersion(config, originalVersion)` for conflict detection.
+- Kept existing `updateDisplayConfig` for simple updates where conflict handling isn’t needed.
+- No deviations beyond naming alignment with current APIs (`sendInstantCommand`, `emitToast`).
 
 ---
 
