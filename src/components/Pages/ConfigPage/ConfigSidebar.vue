@@ -102,13 +102,13 @@ const clearSearch = () => {
       <!-- Spacer to account for TopNav height -->
       <div class="h-14"></div>
 
-      <div class="relative">
+      <div class="relative pb-4">
         <Input v-model="searchQuery" placeholder="Search config pages..." class="h-9 pr-9" />
         <Button
           v-if="searchQuery"
           variant="ghost"
           size="icon"
-          class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+          class="absolute right-1 top-1 h-7 w-7"
           @click="clearSearch"
         >
           <X class="h-4 w-4" />
