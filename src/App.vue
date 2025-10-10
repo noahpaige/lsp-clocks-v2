@@ -6,7 +6,9 @@ import { useToaster } from "@/composables/useToaster";
 import { useWindowManager } from "@/composables/WindowManager/useWindowManager";
 import TopNav from "@/components/Pages/HomePage/TopNav.vue";
 import { useRoute } from "vue-router";
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
+import { useDisplayConfigs } from "@/composables/useDisplayConfigs";
+import { useSessionId } from "@/composables/useSessionId";
 
 // need this to enable dark mode
 const mode = useColorMode();
@@ -17,6 +19,14 @@ const windowMan = useWindowManager();
 const route = useRoute();
 const showTopNav = computed(() => {
   return route.meta.showTopNav;
+});
+
+// Initialize session and load display configs at app start
+const { loadDisplayConfigs } = useDisplayConfigs();
+const { initializeSession } = useSessionId();
+onMounted(() => {
+  initializeSession();
+  loadDisplayConfigs();
 });
 </script>
 

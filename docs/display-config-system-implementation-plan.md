@@ -1561,6 +1561,12 @@ function removeClock(index: number) {
 - [ ] Add/remove actions work
 - [ ] Data updates propagate to parent
 
+**Status (Oct 10, 2025):**
+
+- Implemented `ClockEditor.vue` for single-clock editing with reactive form fields and remove action.
+- Implemented `RowEditor.vue` for row settings and clock list management (add/update/remove).
+- Wired components with our UI primitives.
+
 ---
 
 #### Step 4.2: Create DisplayConfigEditor Page
@@ -1893,6 +1899,11 @@ Add lock warning to the template:
 - [ ] Validation prevents incomplete configs
 - [ ] Cancel returns to list and releases lock
 
+**Status (Oct 10, 2025):**
+
+- Implemented `DisplayConfigEditor.vue` with create/edit flow, validation, add/update/remove rows, and save/cancel actions.
+- Currently uses simple save; conflict and lock handling will be added in the next sub-step per plan.
+
 ---
 
 #### Step 4.3: Create ConflictResolution Component
@@ -2094,6 +2105,11 @@ Add the display config routes to the existing config section:
 - [ ] Navigation to each route works
 - [ ] Route params pass correctly
 
+**Status (Oct 10, 2025):**
+
+- Routes for list/create/edit already exist in `src/router/routes.ts` under `/config/display-configs`.
+- No changes required.
+
 ---
 
 ### Phase 6: Initialize Configs on App Load
@@ -2169,6 +2185,11 @@ function saveName() {
 - [ ] Configs load on app start
 - [ ] No errors in console
 - [ ] Configs available throughout app
+
+**Status (Oct 10, 2025):**
+
+- Added session initialization and display config loading in `App.vue` via `onMounted` using `useSessionId` and `useDisplayConfigs`.
+- No deviations from plan.
 
 ---
 

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Copy, Trash2, Eye } from "lucide-vue-next";
+import DisplayPreview from "./DisplayPreview.vue";
 
 const router = useRouter();
 const { displayConfigs, isLoading, loadDisplayConfigs, deleteDisplayConfig, duplicateDisplayConfig } =
@@ -135,5 +136,6 @@ function getTotalClocks(config: any) {
         </Table>
       </CardContent>
     </Card>
+    <DisplayPreview v-if="showPreview && previewConfigId" :config-id="previewConfigId" @close="showPreview = false" />
   </div>
 </template>
