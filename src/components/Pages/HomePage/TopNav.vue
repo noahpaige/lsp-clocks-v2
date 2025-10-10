@@ -1,5 +1,5 @@
 <script setup>
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { Button } from "@/components/ui/button";
 import { Settings, Clock } from "lucide-vue-next";
 import { useToaster } from "@/composables/useToaster";
@@ -17,6 +17,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 const route = useRoute();
+const router = useRouter();
 
 const navItems = {
   home: {
@@ -56,6 +57,10 @@ const onClickSettings = () => {
     deliverTo: "all",
   });
 };
+
+const navigateTo = (href) => {
+  router.push(href);
+};
 </script>
 
 <template>
@@ -69,11 +74,12 @@ const onClickSettings = () => {
         <NavigationMenuList>
           <NavigationMenuItem v-for="(item, key) in navItems" :key="key">
             <NavigationMenuLink
-              :href="item.href"
+              @click="navigateTo(item.href)"
               :class="[
                 navigationMenuTriggerStyle(),
                 isNavItemSelected(item.href) ? 'text-accent-foreground scale-105' : 'text-foreground/60',
                 'bg-tranparent',
+                'cursor-pointer',
               ]"
             >
               {{ item.name }}
