@@ -1,52 +1,43 @@
-import HomePage from "@/components/Pages/HomePage/HomePage.vue";
-import ClocksDemoPage from "@/components/Pages/Displays/ClocksDemoPage.vue";
-import AllClocks from "@/components/Pages/Displays/AllClocks.vue";
-import TimezoneClock from "@/components/Pages/Displays/TimezoneClock.vue";
-import LoginPage from "@/components/Pages/LoginPage/LoginPage.vue";
-import RegisterPage from "@/components/Pages/RegisterPage/RegisterPage.vue";
-import ConfigPage from "@/components/Pages/ConfigPage/ConfigPage.vue";
-import DisplayControllerPage from "@/components/Pages/DisplayControllerPage/DisplayControllerPage.vue";
-
 const routes = [
   {
     path: "/",
     name: "Home",
-    component: HomePage,
+    component: () => import("@/components/Pages/HomePage/HomePage.vue"),
     meta: { showTopNav: true },
   },
   {
     path: "/login",
     name: "Login",
-    component: LoginPage,
+    component: () => import("@/components/Pages/LoginPage/LoginPage.vue"),
     meta: { showTopNav: false },
   },
   {
     path: "/register",
     name: "Register",
-    component: RegisterPage,
+    component: () => import("@/components/Pages/RegisterPage/RegisterPage.vue"),
     meta: { showTopNav: false },
   },
   {
     path: "/displays/clocks-demo",
     name: "Clocks Demo",
-    component: ClocksDemoPage,
+    component: () => import("@/components/Pages/Displays/ClocksDemoPage.vue"),
     meta: { showTopNav: false },
   },
   {
     path: "/displays/all-clocks-new",
     name: "All Clocks",
-    component: AllClocks,
+    component: () => import("@/components/Pages/Displays/AllClocks.vue"),
     meta: { showTopNav: false },
   },
   {
     path: "/displays/timezone-clocks-new",
     name: "Timezone Clocks",
-    component: TimezoneClock,
+    component: () => import("@/components/Pages/Displays/TimezoneClock.vue"),
     meta: { showTopNav: false },
   },
   {
     path: "/config",
-    component: ConfigPage,
+    component: () => import("@/components/Pages/ConfigPage/ConfigPage.vue"),
     meta: { showTopNav: true },
     children: [
       {
@@ -124,7 +115,7 @@ const routes = [
   {
     path: "/display-controller",
     name: "Display Controller",
-    component: DisplayControllerPage,
+    component: () => import("@/components/Pages/DisplayControllerPage/DisplayControllerPage.vue"),
     meta: { showTopNav: true },
   },
 
