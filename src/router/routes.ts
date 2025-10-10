@@ -1,8 +1,11 @@
+// Only eager load the absolute critical path
+import HomePage from "@/components/Pages/HomePage/HomePage.vue";
+
 const routes = [
   {
     path: "/",
     name: "Home",
-    component: () => import("@/components/Pages/HomePage/HomePage.vue"),
+    component: HomePage,
     meta: { showTopNav: true },
   },
   {
