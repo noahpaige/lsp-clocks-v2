@@ -63,7 +63,7 @@ const navigateTo = (href) => {
 <template>
   <div class="flex items-center justify-between border-b h-14 bg-topnav-background">
     <div class="flex items-center gap-4 self-stretch">
-      <div class="flex items-center px-4 border-r self-stretch w-64">
+      <div class="flex items-center justify-center px-4 border-r self-stretch w-64">
         <Clock class="bg-slate-300 text-black rounded-full w-7 h-7 mt-1" />
         <div class="text-3xl text-slate-300 font-bold ml-2">LSP Clocks</div>
       </div>
