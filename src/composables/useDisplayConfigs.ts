@@ -130,14 +130,14 @@ export function useDisplayConfigs() {
 
   async function updateDisplayConfigWithVersion(
     config: ClockDisplayConfig,
-    originalVersion: number
+    originalLastModifiedAt: number
   ): Promise<{ success: boolean; conflict?: boolean; currentConfig?: VersionedClockDisplayConfig }> {
     try {
       const resp = await sendInstantCommand("GET", getDisplayKey(config.id));
       const raw = resp?.data;
       if (raw && typeof raw === "string") {
         const current = parseVersionedClockDisplayConfig(JSON.parse(raw));
-        if (current.version !== originalVersion) {
+        if ((current.lastModifiedAt ?? 0) !== (originalLastModifiedAt ?? 0)) {
           return { success: false, conflict: true, currentConfig: current };
         }
       }

@@ -39,8 +39,7 @@ export function parseVersionedClockDisplayConfig(raw: any): VersionedClockDispla
   const base = parseClockDisplayConfig(raw);
   return {
     ...base,
-    version: raw?.version ?? Date.now(),
     lastModifiedBy: raw?.lastModifiedBy,
-    lastModifiedAt: raw?.lastModifiedAt,
+    lastModifiedAt: raw?.lastModifiedAt ?? 0,
   } as VersionedClockDisplayConfig;
 }

@@ -43,7 +43,7 @@ The system uses a three-tier configuration model:
 - **List of Displays**: `display:config:list` (set of all display IDs)
 - **Metadata Storage**: Store complete JSON object for each display
 - **Cache Strategy**: Load all configs on app start, update on change
-- **Versioning**: Each config includes `version` (timestamp) and `lastModifiedBy` fields
+- **Metadata**: Each config includes `lastModifiedAt` (timestamp) and `lastModifiedBy` fields
 - **Edit Locks**: `display:config:lock:{id}` stores temporary edit session info
 
 ### Concurrent Editing Strategy
@@ -61,9 +61,9 @@ To support multiple users editing configurations simultaneously, we implement a 
 
 2. **Version Tracking (Conflict Detection)**
 
-   - Each config has `version` (timestamp of last save)
+   - Each config has `lastModifiedAt` (timestamp of last save)
    - Each config has `lastModifiedBy` (user identifier)
-   - On save, compare current version with version when loaded
+   - On save, compare current `lastModifiedAt` with the value when loaded
    - If mismatch detected, show conflict resolution UI
 
 3. **Conflict Resolution UI**
@@ -83,7 +83,7 @@ To support multiple users editing configurations simultaneously, we implement a 
 **Redis Keys:**
 
 - `display:config:lock:{id}` → `{ sessionId, userName, timestamp, expires }`
-- Metadata in config → `{ ...config, version: timestamp, lastModifiedBy: sessionId }`
+- Metadata in config → `{ ...config, lastModifiedAt: timestamp, lastModifiedBy: sessionId }`
 
 #### Long-running Session Hardening (20+ hours)
 
@@ -95,7 +95,7 @@ To keep soft locks reliable over very long sessions without using Web Workers:
 - Unload release: use `navigator.sendBeacon` in `beforeunload` to release locks best-effort
 - Missed beats: if a refresh is missed/throttled, treat as expired; notify user and attempt reacquire
 - Single-tab refresh per user: use `BroadcastChannel` so only one tab per session refreshes a given lock
-- Always protect with versions: proceed on save; version conflict detection guards against data loss
+- Always protect with last-modified timestamps: proceed on save; `lastModifiedAt`-based conflict detection guards against data loss
 
 These measures are more impactful than moving the heartbeat to a Web Worker (which can still be throttled in background tabs) and keep complexity low while maintaining resilience.
 
@@ -396,62 +396,59 @@ export function useDisplayConfigs() {
 
 **File**: `src/types/Versioned.ts`
 
-Create reusable types and utilities for adding version metadata to any data type:
+Create reusable types and utilities for adding last-modified metadata to any data type:
 
 ```typescript
 /**
  * Version metadata fields for concurrent editing support
  */
 export interface VersionMetadata {
-  version: number; // Timestamp of last save (for conflict detection)
   lastModifiedBy?: string; // Session ID or user ID who made the change
-  lastModifiedAt?: number; // Human-readable timestamp (same as version)
+  lastModifiedAt?: number; // Timestamp of last save (for conflict detection and display)
 }
 
 /**
- * Generic wrapper type that adds version metadata to any data type
+ * Generic wrapper type that adds last-modified metadata to any data type
  */
 export type Versioned<T> = T & VersionMetadata;
 
 /**
- * Add version metadata to data (for new records)
- * @param data The data to version
+ * Add last-modified metadata to data (for new records)
+ * @param data The data to annotate
  * @param sessionId Current session/user ID
- * @returns Data with version metadata attached
+ * @returns Data with last-modified metadata attached
  */
 export function withVersion<T>(data: T, sessionId: string): Versioned<T> {
   const timestamp = Date.now();
   return {
     ...data,
-    version: timestamp,
     lastModifiedBy: sessionId,
     lastModifiedAt: timestamp,
   };
 }
 
 /**
- * Update version metadata on existing data (for updates)
- * @param data The data to update
+ * Update last-modified metadata on existing data (for updates)
+ * @param data The data to annotate
  * @param sessionId Current session/user ID
- * @returns Data with updated version metadata
+ * @returns Data with updated last-modified metadata
  */
 export function updateVersion<T>(data: T, sessionId: string): Versioned<T> {
   const timestamp = Date.now();
   return {
     ...data,
-    version: timestamp,
     lastModifiedBy: sessionId,
     lastModifiedAt: timestamp,
   };
 }
 
 /**
- * Strip version metadata from data (if needed)
- * @param versionedData Data with version metadata
- * @returns Data without version metadata
+ * Strip metadata from data (if needed)
+ * @param versionedData Data with last-modified metadata
+ * @returns Data without metadata
  */
 export function withoutVersion<T>(versionedData: Versioned<T>): T {
-  const { version, lastModifiedBy, lastModifiedAt, ...data } = versionedData as any;
+  const { lastModifiedBy, lastModifiedAt, ...data } = versionedData as any;
   return data as T;
 }
 
@@ -465,9 +462,8 @@ export function parseVersioned<T>(raw: any, parser: (raw: any) => T): Versioned<
   const baseData = parser(raw);
   return {
     ...baseData,
-    version: raw.version || Date.now(),
     lastModifiedBy: raw.lastModifiedBy,
-    lastModifiedAt: raw.lastModifiedAt,
+    lastModifiedAt: raw.lastModifiedAt ?? 0,
   };
 }
 ```
@@ -518,7 +514,7 @@ export interface BaseDisplayConfig {
 }
 
 /**
- * Clock display configuration (without version metadata)
+ * Clock display configuration (without version field)
  *
  * This type is specific to clock layouts with rows of clocks.
  * Other display types will have different configuration structures
@@ -564,9 +560,8 @@ export function parseVersionedClockDisplayConfig(raw: any): VersionedClockDispla
   const base = parseClockDisplayConfig(raw);
   return {
     ...base,
-    version: raw.version || Date.now(),
     lastModifiedBy: raw.lastModifiedBy,
-    lastModifiedAt: raw.lastModifiedAt,
+    lastModifiedAt: raw.lastModifiedAt ?? 0,
   };
 }
 ```
@@ -875,7 +870,7 @@ import { useSessionId } from "./useSessionId";
 const { sessionId } = useSessionId();
 
 /**
- * Create a new display config with version info
+ * Create a new display config with last-modified info
  */
 async function createDisplayConfig(config: ClockDisplayConfig): Promise<boolean> {
   try {
@@ -922,16 +917,16 @@ async function createDisplayConfig(config: ClockDisplayConfig): Promise<boolean>
  */
 async function updateDisplayConfig(
   config: ClockDisplayConfig,
-  originalVersion: number
+  originalLastModifiedAt: number
 ): Promise<{ success: boolean; conflict?: boolean; currentConfig?: VersionedClockDisplayConfig }> {
   try {
-    // Get current version from Redis
+    // Get current from Redis
     const response = await redis.send("GET", [getDisplayKey(config.id)]);
     if (response.data) {
       const currentConfig = parseVersionedClockDisplayConfig(JSON.parse(response.data));
 
-      // Check for version conflict
-      if (currentConfig.version !== originalVersion) {
+      // Check for conflict
+      if ((currentConfig.lastModifiedAt ?? 0) !== (originalLastModifiedAt ?? 0)) {
         return {
           success: false,
           conflict: true,
@@ -974,7 +969,7 @@ async function updateDisplayConfig(
 
 - [ ] Generic `Versioned<T>` type and utilities created
 - [ ] `withVersion()` and `updateVersion()` functions work correctly
-- [ ] Base `ClockDisplayConfig` remains clean (no version fields)
+- [ ] Base `ClockDisplayConfig` remains clean (no version field; uses lastModifiedAt)
 - [ ] `VersionedClockDisplayConfig` type alias created
 - [ ] Parse functions handle both versioned and non-versioned data
 - [ ] Session ID generates uniquely per browser tab
@@ -1002,7 +997,7 @@ async function updateDisplayConfig(
 **Status (Oct 10, 2025):**
 
 - Updated `useDisplayConfigs` to use `withVersion` on create and `updateVersion` on update.
-- Added `getVersionedDisplayConfig` and `updateDisplayConfigWithVersion(config, originalVersion)` for conflict detection.
+- Added `getVersionedDisplayConfig` and `updateDisplayConfigWithVersion(config, originalLastModifiedAt)` for conflict detection.
 - Kept existing `updateDisplayConfig` for simple updates where conflict handling isn’t needed.
 - No deviations beyond naming alignment with current APIs (`sendInstantCommand`, `emitToast`).
 
@@ -1762,7 +1757,7 @@ import ConflictResolution from "./ConflictResolution.vue";
 const { acquireLock, releaseLock, checkLock } = useEditLock();
 
 const lockInfo = ref<EditLock | null>(null);
-const originalVersion = ref<number>(0);
+const originalLastModifiedAt = ref<number>(0);
 const showConflictModal = ref(false);
 const conflictConfig = ref<VersionedClockDisplayConfig | null>(null);
 
@@ -1772,7 +1767,7 @@ onMounted(async () => {
     const existing = getDisplayConfig(configId.value);
     if (existing) {
       displayConfig.value = JSON.parse(JSON.stringify(existing));
-      originalVersion.value = existing.version;
+      originalLastModifiedAt.value = existing.lastModifiedAt || 0;
 
       // Check if someone else is editing
       lockInfo.value = await checkLock(configId.value);
@@ -1808,7 +1803,7 @@ async function save() {
 
   if (isEditMode.value) {
     // Check for conflicts
-    const result = await updateDisplayConfig(displayConfig.value, originalVersion.value);
+    const result = await updateDisplayConfig(displayConfig.value, originalLastModifiedAt.value);
 
     if (result.conflict && result.currentConfig) {
       // Show conflict resolution UI
@@ -1835,7 +1830,7 @@ async function save() {
 // Handle conflict resolution
 function handleOverwrite() {
   // User chose to overwrite - force save with current data
-  originalVersion.value = conflictConfig.value!.version;
+  originalLastModifiedAt.value = conflictConfig.value!.lastModifiedAt || 0;
   showConflictModal.value = false;
   save();
 }
@@ -1974,7 +1969,7 @@ const differences = computed(() => {
         <p class="text-sm text-muted-foreground">
           This configuration was modified by
           <strong>{{ theirConfig.lastModifiedBy || "another user" }}</strong>
-          at {{ formatTime(theirConfig.lastModifiedAt || theirConfig.version) }} while you were editing.
+          at {{ formatTime(theirConfig.lastModifiedAt || 0) }} while you were editing.
         </p>
 
         <div class="space-y-2">
@@ -2945,8 +2940,8 @@ The implemented system provides **hybrid optimistic locking** that balances coll
 
 #### 3. **Version Tracking (Protection Layer)**
 
-- Each config stores: `version` (timestamp), `lastModifiedBy`, `lastModifiedAt`
-- On save, system checks if version has changed
+- Each config stores: `lastModifiedAt` (timestamp), `lastModifiedBy`
+- On save, system checks if `lastModifiedAt` has changed
 - If changed → show conflict resolution UI
 - If unchanged → save proceeds
 

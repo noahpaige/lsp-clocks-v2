@@ -2,9 +2,8 @@
  * Version metadata fields for concurrent editing support
  */
 export interface VersionMetadata {
-  version: number; // Timestamp of last save (for conflict detection)
   lastModifiedBy?: string; // Session ID or user ID who made the change
-  lastModifiedAt?: number; // Human-readable timestamp (same as version)
+  lastModifiedAt?: number; // Timestamp of last save (for conflict detection and display)
 }
 
 /**
@@ -19,7 +18,6 @@ export function withVersion<T>(data: T, sessionId: string): Versioned<T> {
   const timestamp = Date.now();
   return {
     ...data,
-    version: timestamp,
     lastModifiedBy: sessionId,
     lastModifiedAt: timestamp,
   } as Versioned<T>;
@@ -32,7 +30,6 @@ export function updateVersion<T>(data: T, sessionId: string): Versioned<T> {
   const timestamp = Date.now();
   return {
     ...data,
-    version: timestamp,
     lastModifiedBy: sessionId,
     lastModifiedAt: timestamp,
   } as Versioned<T>;
@@ -42,7 +39,7 @@ export function updateVersion<T>(data: T, sessionId: string): Versioned<T> {
  * Strip version metadata from data (if needed)
  */
 export function withoutVersion<T>(versionedData: Versioned<T>): T {
-  const { version, lastModifiedBy, lastModifiedAt, ...rest } = versionedData as any;
+  const { lastModifiedBy, lastModifiedAt, ...rest } = versionedData as any;
   return rest as T;
 }
 
@@ -53,8 +50,8 @@ export function parseVersioned<T>(raw: any, parser: (raw: any) => T): Versioned<
   const base = parser(raw);
   return {
     ...base,
-    version: raw?.version ?? Date.now(),
     lastModifiedBy: raw?.lastModifiedBy,
-    lastModifiedAt: raw?.lastModifiedAt,
+    // Use 0 as default so legacy non-versioned records don't trigger conflicts
+    lastModifiedAt: raw?.lastModifiedAt ?? 0,
   } as Versioned<T>;
 }

@@ -49,7 +49,7 @@ const differences = computed(() => {
         <p class="text-sm text-muted-foreground">
           This configuration was modified by
           <strong>{{ theirConfig.lastModifiedBy || "another user" }}</strong>
-          at {{ formatTime(theirConfig.lastModifiedAt || theirConfig.version) }} while you were editing.
+          at {{ formatTime(theirConfig.lastModifiedAt || 0) }} while you were editing.
         </p>
         <div class="space-y-2">
           <h4 class="text-sm font-medium">Changes detected:</h4>

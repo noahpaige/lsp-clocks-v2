@@ -31,7 +31,7 @@ const displayConfig = ref<ClockDisplayConfig>({
 
 const isSaving = ref(false);
 const lockInfo = ref<any | null>(null);
-const originalVersion = ref<number>(0);
+const originalLastModifiedAt = ref<number>(0);
 const showConflictModal = ref(false);
 const conflictConfig = ref<any | null>(null);
 
@@ -40,9 +40,9 @@ onMounted(async () => {
     const existing = getDisplayConfig(configId.value);
     if (existing) {
       displayConfig.value = JSON.parse(JSON.stringify(existing));
-      // store the version if present (optional at this stage)
+      // store the lastModifiedAt if present
       // @ts-ignore
-      originalVersion.value = existing.version || 0;
+      originalLastModifiedAt.value = existing.lastModifiedAt || 0;
 
       lockInfo.value = await checkLock(configId.value);
       await acquireLock(configId.value);
@@ -76,7 +76,7 @@ async function save() {
 
   isSaving.value = true;
   if (isEditMode.value) {
-    const result = await updateDisplayConfigWithVersion(displayConfig.value, originalVersion.value);
+    const result = await updateDisplayConfigWithVersion(displayConfig.value, originalLastModifiedAt.value);
     if (result.conflict && result.currentConfig) {
       conflictConfig.value = result.currentConfig;
       showConflictModal.value = true;
@@ -99,8 +99,8 @@ function cancel() {
 }
 
 function handleOverwrite() {
-  // Advance originalVersion to the latest and retry save
-  originalVersion.value = conflictConfig.value!.version;
+  // Advance baseline to the latest and retry save
+  originalLastModifiedAt.value = conflictConfig.value!.lastModifiedAt || 0;
   showConflictModal.value = false;
   save();
 }
