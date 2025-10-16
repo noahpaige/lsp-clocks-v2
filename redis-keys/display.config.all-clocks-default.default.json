@@ -1,0 +1,115 @@
+{
+  "key": "display:config:all-clocks-default",
+  "type": "string",
+  "data": {
+    "id": "all-clocks-default",
+    "name": "All Clocks (Default)",
+    "description": "Recreation of the original AllClocks.vue layout",
+    "type": "clock-layout",
+    "containerClasses": "flex flex-col w-full gap-8 justify-center items-center",
+    "rows": [
+      {
+        "clocks": [
+          {
+            "labelRight": "UTC",
+            "size": "2xl",
+            "format": "HHMMSS",
+            "timeType": "date"
+          },
+          {
+            "labelRight": "PST",
+            "size": "2xl",
+            "format": "HHMMSS",
+            "timeType": "date"
+          }
+        ],
+        "gap": 8,
+        "justify": "justify-center",
+        "align": "items-center"
+      },
+      {
+        "clocks": [
+          {
+            "labelLeft": "T",
+            "size": "xl",
+            "format": "HHMMSS",
+            "timeType": "timespan"
+          },
+          {
+            "labelLeft": "L",
+            "size": "xl",
+            "format": "HHMMSS",
+            "timeType": "timespan"
+          }
+        ],
+        "gap": 8,
+        "justify": "justify-center",
+        "align": "items-center"
+      },
+      {
+        "clocks": [
+          {
+            "labelTop": "T-Zero",
+            "labelRight": "UTC",
+            "size": "xl",
+            "format": "DDHHMMSS",
+            "timeType": "date"
+          }
+        ],
+        "gap": 8,
+        "justify": "justify-center",
+        "align": "items-center"
+      },
+      {
+        "clocks": [
+          {
+            "labelTop": "Hold Remaining",
+            "size": "lg",
+            "format": "HHMMSS",
+            "timeType": "timespan"
+          },
+          {
+            "labelTop": "Time Until Restart",
+            "size": "lg",
+            "format": "HHMMSS",
+            "timeType": "timespan"
+          },
+          {
+            "labelTop": "Window Remaining",
+            "size": "lg",
+            "format": "HHMMSS",
+            "timeType": "timespan"
+          },
+          {
+            "labelTop": "Window Used",
+            "size": "lg",
+            "format": "HHMMSS",
+            "timeType": "timespan"
+          }
+        ],
+        "gap": 8,
+        "justify": "justify-center",
+        "align": "items-center"
+      },
+      {
+        "clocks": [
+          {
+            "labelLeft": "MET",
+            "size": "md",
+            "format": "HHMMSS",
+            "timeType": "timespan"
+          },
+          {
+            "labelLeft": "MET",
+            "size": "md",
+            "format": "SS",
+            "timeType": "timespan"
+          }
+        ],
+        "gap": 8,
+        "justify": "justify-center",
+        "align": "items-center"
+      }
+    ]
+  }
+}

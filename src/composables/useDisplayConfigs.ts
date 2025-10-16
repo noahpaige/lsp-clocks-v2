@@ -185,20 +185,6 @@ export function useDisplayConfigs() {
     return createDisplayConfig(duplicate);
   }
 
-  async function seedDefaultConfigs(): Promise<void> {
-    try {
-      const { defaultDisplayConfigs } = await import("@/lib/defaultDisplayConfigs");
-      for (const config of defaultDisplayConfigs) {
-        const exists = displayConfigs.value.some((c) => c.id === config.id);
-        if (!exists) {
-          await createDisplayConfig(config);
-        }
-      }
-    } catch (e) {
-      console.error("Failed to seed default configs", e);
-    }
-  }
-
   return {
     displayConfigs: readonly(displayConfigs),
     isLoading: readonly(isLoading),
@@ -211,6 +197,5 @@ export function useDisplayConfigs() {
     updateDisplayConfigWithVersion,
     deleteDisplayConfig,
     duplicateDisplayConfig,
-    seedDefaultConfigs,
   };
 }

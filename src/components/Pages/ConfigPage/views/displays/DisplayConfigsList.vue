@@ -9,18 +9,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Copy, Trash2, Eye, Save, Upload } from "lucide-vue-next";
 import DisplayPreview from "./DisplayPreview.vue";
-import { useToaster } from "@/composables/useToaster";
+import { useRedisFileSync } from "@/composables/useRedisFileSync";
 
 const router = useRouter();
 const { displayConfigs, isLoading, loadDisplayConfigs, deleteDisplayConfig, duplicateDisplayConfig } =
   useDisplayConfigs();
-const { emitToast } = useToaster();
+const { isSaving, isRestoring, saveKeysToFiles, restoreKeysFromFiles, listVariantsForKey, generateBackupVariant } =
+  useRedisFileSync();
 
 const searchQuery = ref("");
 const showPreview = ref(false);
 const previewConfigId = ref<string | null>(null);
-const isSaving = ref(false);
-const isRestoring = ref(false);
 
 const filteredConfigs = computed(() => {
   if (!searchQuery.value) return displayConfigs.value;
@@ -65,48 +64,34 @@ function getTotalClocks(config: any) {
 }
 
 async function saveToFiles() {
-  if (!confirm("Save all display configs to JSON files in redis-keys folder?")) return;
-  isSaving.value = true;
-  try {
-    const response = await fetch("http://localhost:3000/api/display-configs/save-to-files", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    const result = await response.json();
-    if (result.success) {
-      emitToast({ title: `Saved ${result.saved.length} configs to files`, type: "success", deliverTo: "all" });
-    } else {
-      emitToast({ title: "Failed to save configs", type: "error", deliverTo: "all" });
-    }
-  } catch (e) {
-    console.error(e);
-    emitToast({ title: "Error saving configs to files", type: "error", deliverTo: "all" });
-  } finally {
-    isSaving.value = false;
-  }
+  const variant = prompt("Enter variant name:", "default");
+  if (!variant) return;
+
+  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  await saveKeysToFiles(allKeys, variant, true);
 }
 
 async function restoreFromFiles() {
-  if (!confirm("Restore display configs from JSON files? This will reload all configs from redis-keys folder.")) return;
-  isRestoring.value = true;
-  try {
-    const response = await fetch("http://localhost:3000/api/display-configs/restore-from-files", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-    const result = await response.json();
-    if (result.success) {
-      emitToast({ title: result.message, type: "success", deliverTo: "all" });
-      await loadDisplayConfigs();
-    } else {
-      emitToast({ title: "Failed to restore configs", type: "error", deliverTo: "all" });
-    }
-  } catch (e) {
-    console.error(e);
-    emitToast({ title: "Error restoring configs from files", type: "error", deliverTo: "all" });
-  } finally {
-    isRestoring.value = false;
+  // Optionally list variants first
+  const sampleKey = displayConfigs.value[0] ? `display:config:${displayConfigs.value[0].id}` : "display:config:default";
+  const variants = await listVariantsForKey(sampleKey);
+
+  const variantList = variants.length > 0 ? `\nAvailable: ${variants.join(", ")}` : "";
+  const variant = prompt(`Restore from variant:${variantList}`, "default");
+  if (!variant) return;
+
+  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  const success = await restoreKeysFromFiles(allKeys, variant, true);
+
+  if (success) {
+    await loadDisplayConfigs();
   }
+}
+
+async function quickSaveAsBackup() {
+  const variant = generateBackupVariant();
+  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  await saveKeysToFiles(allKeys, variant, true);
 }
 </script>
 
@@ -120,11 +105,15 @@ async function restoreFromFiles() {
       <div class="flex gap-2">
         <Button @click="saveToFiles" variant="outline" :disabled="isSaving">
           <Save class="mr-2 h-4 w-4" />
-          {{ isSaving ? "Saving..." : "Save to Files" }}
+          {{ isSaving ? "Saving..." : "Save to File" }}
         </Button>
         <Button @click="restoreFromFiles" variant="outline" :disabled="isRestoring">
           <Upload class="mr-2 h-4 w-4" />
-          {{ isRestoring ? "Restoring..." : "Restore from Files" }}
+          {{ isRestoring ? "Restoring..." : "Restore from File" }}
+        </Button>
+        <Button @click="quickSaveAsBackup" variant="outline" :disabled="isSaving" title="Quick backup with timestamp">
+          <Save class="mr-2 h-4 w-4" />
+          Quick Backup
         </Button>
         <Button @click="createNew">
           <Plus class="mr-2 h-4 w-4" />

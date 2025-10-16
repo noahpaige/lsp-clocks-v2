@@ -2332,9 +2332,14 @@ async function seedDefaultConfigs() {
 
 **Status (Oct 16, 2025):**
 
-- Added auto-seeding in `App.vue` via `seedDefaultConfigs()` after `loadDisplayConfigs()`.
-- Added `src/lib/defaultDisplayConfigs.ts` with 3 sample configurations.
-- Enhanced `redis-loader.ts` to support version metadata injection (see below for full save/restore plan).
+- ✅ Created 3 default display config JSON files in `redis-keys/`:
+  - `display.config.all-clocks-default.default.json`
+  - `display.config.mission-countdown.default.json`
+  - `display.config.simple-time.default.json`
+- ✅ Updated `server.ts` to load all Redis keys with version injection options for display configs
+- ✅ Removed in-app seeding code (`seedDefaultConfigs`) - now handled by server at startup
+- ✅ Deleted `src/lib/defaultDisplayConfigs.ts` - migrated to JSON files
+- **Deviation**: Changed from in-app seeding to server-side JSON loading for consistency with existing redis-keys pattern
 
 ---
 
@@ -3038,14 +3043,25 @@ src/
 
 #### Implementation Checklist
 
-- [ ] Create `src/shared/variantUtils.ts` with sanitization/validation
-- [ ] Create `src/server/redis-file-utils.ts` with file I/O helpers
-- [ ] Update `src/server/RedisAPI.ts` with 3 new endpoints under `/api/save-restore/*`
-- [ ] Create `src/composables/useRedisFileSync.ts` frontend composable
-- [ ] Update `DisplayConfigsList.vue` to use the composable
+- [x] Create `src/shared/variantUtils.ts` with sanitization/validation
+- [x] Create `src/server/redis-file-utils.ts` with file I/O helpers
+- [x] Update `src/server/RedisAPI.ts` with 3 new endpoints under `/api/save-restore/*`
+- [x] Create `src/composables/useRedisFileSync.ts` frontend composable
+- [x] Update `DisplayConfigsList.vue` to use the composable
 - [ ] Test happy path (save/restore with default variant)
 - [ ] Test error cases (missing keys, invalid variants, file I/O errors)
 - [ ] Test quick backup feature
+
+**Status (Oct 16, 2025):**
+
+- ✅ Implemented all 5 steps of Phase 7.5
+- ✅ Created shared `variantUtils.ts` with `sanitizeVariant`, `isValidVariant`, `generateBackupVariant` (includes time)
+- ✅ Created `redis-file-utils.ts` with `addVersionMetadata` helper, file I/O with comprehensive error handling
+- ✅ Replaced display-specific endpoints with generic `/api/save-restore/*` routes
+- ✅ Created reusable `useRedisFileSync` composable
+- ✅ Updated `DisplayConfigsList` with 3 buttons: Save to File, Restore from File, Quick Backup
+- ✅ API responses only return key/variant pairs (no file paths)
+- Ready for testing
 
 ---
 

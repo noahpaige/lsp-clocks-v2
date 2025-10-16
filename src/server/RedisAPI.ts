@@ -3,7 +3,16 @@ import cors from "cors";
 import { Server as SocketServer } from "socket.io";
 import { createClient, RedisClientType } from "redis";
 import { Server as HTTPServer } from "http";
-import fs from "fs/promises";
+import {
+  keyToFileName,
+  listVariantsForKey,
+  stripVersionMetadata,
+  addVersionMetadata,
+  safeReadJsonFile,
+  safeWriteJsonFile,
+  REDIS_KEYS_DIR,
+} from "./redis-file-utils";
+import { isValidVariant } from "@/shared/variantUtils";
 import path from "path";
 
 class RedisAPI {
@@ -73,12 +82,16 @@ class RedisAPI {
       await this.onMessage(req, res);
     });
 
-    this.app.post("/api/display-configs/save-to-files", async (req, res) => {
-      await this.saveDisplayConfigsToFiles(req, res);
+    this.app.post("/api/save-restore/save-keys", async (req, res) => {
+      await this.saveKeysToFiles(req, res);
     });
 
-    this.app.post("/api/display-configs/restore-from-files", async (req, res) => {
-      await this.restoreDisplayConfigsFromFiles(req, res);
+    this.app.post("/api/save-restore/restore-keys", async (req, res) => {
+      await this.restoreKeysFromFiles(req, res);
+    });
+
+    this.app.get("/api/save-restore/list-variants", async (req, res) => {
+      await this.listVariants(req, res);
     });
   }
 
@@ -208,53 +221,112 @@ class RedisAPI {
     });
   }
 
-  private async saveDisplayConfigsToFiles(req: Request, res: Response) {
+  private async saveKeysToFiles(req: Request, res: Response) {
     try {
-      const configIds = await this.redis.sMembers("display:config:list");
-      const savedFiles: string[] = [];
+      const { keys, variant = "default", stripVersionFields = true } = req.body;
 
-      for (const id of configIds) {
-        const raw = await this.redis.get(`display:config:${id}`);
-        if (!raw) continue;
-
-        const config = JSON.parse(raw);
-        // Strip version metadata
-        const { lastModifiedAt, lastModifiedBy, ...cleanConfig } = config;
-
-        const fileName = `display-config-${id}.json`;
-        const filePath = path.resolve(__dirname, "../../redis-keys", fileName);
-        const fileContent = JSON.stringify(
-          { key: `display:config:${id}`, type: "string", data: cleanConfig },
-          null,
-          2
-        );
-
-        await fs.writeFile(filePath, fileContent, "utf-8");
-        savedFiles.push(fileName);
+      if (!Array.isArray(keys) || keys.length === 0) {
+        return res.status(400).json({ error: "keys array is required" });
       }
 
-      res.json({ success: true, saved: savedFiles });
+      if (!isValidVariant(variant)) {
+        return res.status(400).json({ error: "Invalid variant name" });
+      }
+
+      const saved: { key: string; variant: string }[] = [];
+      const errors: { key: string; error: string }[] = [];
+
+      for (const key of keys) {
+        try {
+          const raw = await this.redis.get(key);
+          if (!raw) {
+            errors.push({ key, error: "Key not found in Redis" });
+            continue;
+          }
+
+          let data = JSON.parse(raw);
+          if (stripVersionFields) {
+            data = stripVersionMetadata(data);
+          }
+
+          const fileName = keyToFileName(key, variant);
+          const filePath = path.join(REDIS_KEYS_DIR, fileName);
+
+          await safeWriteJsonFile(filePath, { key, type: "string", data });
+          saved.push({ key, variant });
+        } catch (error: any) {
+          errors.push({ key, error: error.message });
+        }
+      }
+
+      res.json({ success: true, saved, errors: errors.length > 0 ? errors : undefined });
     } catch (error: any) {
-      console.error("Error saving display configs to files:", error);
+      console.error("Error in saveKeysToFiles:", error);
       res.status(500).json({ error: error.message });
     }
   }
 
-  private async restoreDisplayConfigsFromFiles(req: Request, res: Response) {
+  private async restoreKeysFromFiles(req: Request, res: Response) {
     try {
-      const { loadAllRedisKeys } = await import("./redis-loader");
-      const redisKeysFolder = path.resolve(__dirname, "../../redis-keys");
+      const { keys, variant = "default", addVersionFields = true, versionOptions = {} } = req.body;
 
-      await loadAllRedisKeys(redisKeysFolder, "redis://localhost:6379", {
-        addVersion: true,
-        lastModifiedBy: "restore:user",
-        keyPattern: /^display:config:/,
-        overwriteIfPresent: true,
-      });
+      if (!Array.isArray(keys) || keys.length === 0) {
+        return res.status(400).json({ error: "keys array is required" });
+      }
 
-      res.json({ success: true, message: "Display configs restored from files" });
+      if (!isValidVariant(variant)) {
+        return res.status(400).json({ error: "Invalid variant name" });
+      }
+
+      const restored: { key: string; variant: string }[] = [];
+      const errors: { key: string; variant: string; error: string }[] = [];
+
+      for (const key of keys) {
+        try {
+          const fileName = keyToFileName(key, variant);
+          const filePath = path.join(REDIS_KEYS_DIR, fileName);
+
+          const fileData = await safeReadJsonFile(filePath);
+          let { data } = fileData;
+
+          if (addVersionFields) {
+            data = addVersionMetadata(data, versionOptions.lastModifiedBy || "restore:user");
+          }
+
+          // Store to Redis
+          await this.redis.set(key, JSON.stringify(data));
+
+          // Update display:config:list if it's a display config
+          if (key.startsWith("display:config:")) {
+            const id = key.replace("display:config:", "");
+            await this.redis.sAdd("display:config:list", id);
+          }
+
+          restored.push({ key, variant });
+        } catch (error: any) {
+          errors.push({ key, variant, error: error.message });
+        }
+      }
+
+      res.json({ success: true, restored, errors: errors.length > 0 ? errors : undefined });
     } catch (error: any) {
-      console.error("Error restoring display configs from files:", error);
+      console.error("Error in restoreKeysFromFiles:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  private async listVariants(req: Request, res: Response) {
+    try {
+      const { key } = req.query;
+
+      if (!key || typeof key !== "string") {
+        return res.status(400).json({ error: "key query parameter is required" });
+      }
+
+      const variants = await listVariantsForKey(key);
+      res.json({ success: true, key, variants });
+    } catch (error: any) {
+      console.error("Error listing variants:", error);
       res.status(500).json({ error: error.message });
     }
   }
