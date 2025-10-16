@@ -13,7 +13,18 @@ async function getRedisInstance(redisUrl: string = "redis://localhost:6379"): Pr
   return redisInstance;
 }
 
-async function loadAllRedisKeys(directory: string, redisUrl: string = "redis://localhost:6379"): Promise<void> {
+export interface RedisLoaderOptions {
+  addVersion?: boolean;
+  lastModifiedBy?: string;
+  keyPattern?: RegExp;
+  overwriteIfPresent?: boolean;
+}
+
+async function loadAllRedisKeys(
+  directory: string,
+  redisUrl: string = "redis://localhost:6379",
+  options?: RedisLoaderOptions
+): Promise<void> {
   const redis = await getRedisInstance(redisUrl);
 
   try {
@@ -22,7 +33,7 @@ async function loadAllRedisKeys(directory: string, redisUrl: string = "redis://l
     for (const file of files) {
       const filePath = path.join(directory, file);
       const jsonData = await loadJsonFile(filePath);
-      if (jsonData) await storeInRedis(redis, jsonData);
+      if (jsonData) await storeInRedis(redis, jsonData, options);
     }
 
     console.log("All JSON files processed successfully.");
@@ -31,13 +42,13 @@ async function loadAllRedisKeys(directory: string, redisUrl: string = "redis://l
   }
 }
 
-async function loadRedisKey(filePath: string): Promise<void> {
+async function loadRedisKey(filePath: string, options?: RedisLoaderOptions): Promise<void> {
   try {
     const jsonData = await loadJsonFile(filePath);
     if (!jsonData) return;
 
     const redis = await getRedisInstance();
-    await storeInRedis(redis, jsonData);
+    await storeInRedis(redis, jsonData, options);
     console.log(`Processed file: ${filePath}`);
   } catch (error) {
     console.error(`Error processing file ${filePath}:`, error);
@@ -84,13 +95,39 @@ const redisCommands: Record<string, (redis: RedisClientType, key: string, data: 
   },
 };
 
+function injectVersionMetadata(data: any, options: RedisLoaderOptions): any {
+  if (typeof data === "object" && data !== null && !Array.isArray(data)) {
+    const hasExisting = "lastModifiedAt" in data || "lastModifiedBy" in data;
+    if (hasExisting && options.overwriteIfPresent === false) {
+      return data;
+    }
+    const timestamp = Date.now();
+    return {
+      ...data,
+      lastModifiedAt: timestamp,
+      lastModifiedBy: options.lastModifiedBy || "seed:init",
+    };
+  }
+  return data;
+}
+
 async function storeInRedis(
   redis: RedisClientType,
-  { key, type, data }: { key: string; type: string; data: any }
+  { key, type, data }: { key: string; type: string; data: any },
+  options?: RedisLoaderOptions
 ): Promise<void> {
   if (!key || !type || !data) {
     console.error("Invalid JSON format:", { key, type, data });
     return;
+  }
+
+  // Apply versioning if requested
+  let finalData = data;
+  if (options?.addVersion && type.toLowerCase() === "string") {
+    const pattern = options.keyPattern || /^display:config:/;
+    if (pattern.test(key)) {
+      finalData = injectVersionMetadata(data, options);
+    }
   }
 
   const command = redisCommands[type.toLowerCase()];
@@ -101,7 +138,7 @@ async function storeInRedis(
       await redis.sendCommand(["DEL", key]);
     }
 
-    await command(redis, key, data);
+    await command(redis, key, finalData);
     console.log(`Loaded ${key} as ${type} in Redis`);
   } else {
     console.error(`Unsupported Redis type: ${type}`);

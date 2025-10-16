@@ -22,11 +22,12 @@ const showTopNav = computed(() => {
 });
 
 // Initialize session and load display configs at app start
-const { loadDisplayConfigs } = useDisplayConfigs();
+const { loadDisplayConfigs, seedDefaultConfigs } = useDisplayConfigs();
 const { initializeSession } = useSessionId();
-onMounted(() => {
+onMounted(async () => {
   initializeSession();
-  loadDisplayConfigs();
+  await loadDisplayConfigs();
+  await seedDefaultConfigs();
 });
 </script>
 

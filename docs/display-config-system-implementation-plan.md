@@ -2196,6 +2196,20 @@ Create a utility to seed the database with sample configurations for first-time 
 
 **File**: `src/lib/defaultDisplayConfigs.ts`
 
+**Status (Oct 15, 2025):**
+
+- Implemented `src/lib/defaultDisplayConfigs.ts` with 3 sample configs: "All Clocks (Default)", "Mission Countdown", and "Simple Time Display".
+- Added `seedDefaultConfigs()` to `useDisplayConfigs` that dynamically imports and creates missing defaults.
+- **Redis Loader Enhancement**: Modified `src/server/redis-loader.ts` to support version injection:
+  - Added `RedisLoaderOptions` interface with `addVersion`, `lastModifiedBy`, `keyPattern`, `overwriteIfPresent`.
+  - `loadAllRedisKeys` and `loadRedisKey` now accept optional `options` parameter.
+  - `storeInRedis` applies `injectVersionMetadata` when `addVersion=true`, `type="string"`, and key matches pattern.
+  - Defaults: `keyPattern=/^display:config:/`, `lastModifiedBy="seed:init"`, `overwriteIfPresent=true`.
+  - This keeps version fields out of JSON files while ensuring stored values include `lastModifiedAt`/`lastModifiedBy` for conflict detection.
+- **Deviation from plan**: Plan suggested in-app seeding only; we enhanced redis-loader for broader use (can seed from files at server start with version metadata).
+
+**File**: `src/lib/defaultDisplayConfigs.ts`
+
 ```typescript
 import { ClockDisplayConfig } from "@/types/ClockDisplayConfig";
 
@@ -2315,6 +2329,765 @@ async function seedDefaultConfigs() {
 - [ ] Default configs are well-designed
 - [ ] Seeding function works
 - [ ] Doesn't duplicate existing configs
+
+**Status (Oct 16, 2025):**
+
+- Added auto-seeding in `App.vue` via `seedDefaultConfigs()` after `loadDisplayConfigs()`.
+- Added `src/lib/defaultDisplayConfigs.ts` with 3 sample configurations.
+- Enhanced `redis-loader.ts` to support version metadata injection (see below for full save/restore plan).
+
+---
+
+### Phase 7.5: Generic Save/Restore System with Variants
+
+#### Overview
+
+Provide a generic, reusable system for saving Redis keys to JSON files and restoring them, with support for multiple named variants. This allows users to maintain different versions of their configurations (e.g., "default", "backup-2024-10-16", "launch-day") and quickly switch between them.
+
+**Note**: "Variants" here refer to different saved copies of data for different scenarios, NOT the version metadata (`lastModifiedAt`/`lastModifiedBy`) used for conflict detection.
+
+---
+
+#### File Naming Strategy
+
+**Format**: `{sanitized-key}.{variant}.json`
+
+**Examples**:
+
+```
+redis-keys/
+  display.config.mission-control.default.json
+  display.config.mission-control.backup-2024-10-16-14-30-45.json
+  display.config.mission-control.launch-day.json
+  clockdata.default.json
+  clockdata.simulation-mode.json
+```
+
+**Rules**:
+
+- Redis key `display:config:foo` → sanitized to `display.config.foo`
+- Colons (`:`) replaced with dots (`.`)
+- Variant appended as suffix before `.json`
+- Default variant: `"default"`
+- Server-side only: Client never sees/handles filenames
+
+---
+
+#### Step 7.5.1: Create Shared Variant Utilities
+
+**File**: `src/shared/variantUtils.ts` (new shared directory)
+
+**Purpose**: Shared validation and sanitization between server and client.
+
+```typescript
+/**
+ * Sanitize variant name to prevent path traversal and ensure safe filenames
+ * Shared between server and client for consistency
+ */
+export function sanitizeVariant(variant: string): string {
+  // Only allow alphanumeric, dash, underscore
+  return variant.replace(/[^a-zA-Z0-9-_]/g, "-").substring(0, 50);
+}
+
+/**
+ * Validate variant name
+ */
+export function isValidVariant(variant: string): boolean {
+  return /^[a-zA-Z0-9-_]{1,50}$/.test(variant);
+}
+
+/**
+ * Generate timestamp-based variant name
+ */
+export function generateBackupVariant(): string {
+  const now = new Date();
+  const date = now.toISOString().split("T")[0]; // YYYY-MM-DD
+  const time = now.toTimeString().split(" ")[0].replace(/:/g, "-"); // HH-MM-SS
+  return `backup-${date}-${time}`;
+}
+```
+
+**Why shared?**
+
+- ✅ Single source of truth for validation
+- ✅ Client can validate before sending request
+- ✅ Server validates again (defense in depth)
+- ✅ Consistent behavior everywhere
+- ✅ Reduces code duplication
+
+**Justification for each option property:**
+
+1. **`addVersion?: boolean`** (default: `false`)
+
+   - **Purpose**: Opt-in flag to inject version metadata
+   - **Why**: Not all Redis keys need versioning (e.g., `clockdata`, counters, caches). Only display configs benefit from conflict detection.
+   - **Justification**: Explicit opt-in prevents polluting unrelated data.
+
+2. **`lastModifiedBy?: string`** (default: `"seed:init"`)
+
+   - **Purpose**: Identifier for who created this record
+   - **Why**: Conflict resolution UI shows "Modified by X". Distinguishes seed vs user edits.
+   - **Justification**: Helpful for debugging and audit trails.
+
+3. **`keyPattern?: RegExp`** (default: `/^display:config:/`)
+
+   - **Purpose**: Only inject version metadata for keys matching this pattern
+   - **Why**: Granular control when loading multiple files in batch
+   - **Justification**: Prevents accidental versioning of non-config keys.
+
+4. **`overwriteIfPresent?: boolean`** (default: `true`)
+   - **Purpose**: Controls whether to overwrite existing metadata
+   - **Why**: `true` = fresh timestamps (seed), `false` = preserve (restore from backup)
+   - **Justification**: Flexibility for different workflows.
+
+---
+
+#### Step 7.5.2: Create Server-side File Utilities
+
+**File**: `src/server/redis-file-utils.ts` (new)
+
+**Purpose**: Centralize all file I/O operations with comprehensive error handling.
+
+```typescript
+import fs from "fs/promises";
+import path from "path";
+import { sanitizeVariant } from "@/shared/variantUtils";
+
+const REDIS_KEYS_DIR = path.resolve(__dirname, "../../redis-keys");
+
+export function keyToFileName(redisKey: string, variant: string = "default"): string {
+  const sanitized = redisKey.replace(/:/g, ".");
+  const safeVariant = sanitizeVariant(variant);
+  return `${sanitized}.${safeVariant}.json`;
+}
+
+export function fileNameToKey(fileName: string): { key: string; variant: string } {
+  const withoutExt = fileName.replace(/\.json$/, "");
+  const parts = withoutExt.split(".");
+  const variant = parts[parts.length - 1];
+  const keySanitized = parts.slice(0, -1).join(".");
+  const key = keySanitized.replace(/\./g, ":");
+  return { key, variant };
+}
+
+export async function listVariantsForKey(redisKey: string): Promise<string[]> {
+  try {
+    const sanitized = redisKey.replace(/:/g, ".");
+    const prefix = `${sanitized}.`;
+    const files = await fs.readdir(REDIS_KEYS_DIR);
+
+    const variants = files
+      .filter((f) => f.startsWith(prefix) && f.endsWith(".json"))
+      .map((f) => f.replace(prefix, "").replace(".json", ""))
+      .sort();
+
+    return variants;
+  } catch (error) {
+    console.error(`Error listing variants for ${redisKey}:`, error);
+    return [];
+  }
+}
+
+export function stripVersionMetadata(data: any): any {
+  if (typeof data === "object" && data !== null && !Array.isArray(data)) {
+    const { lastModifiedAt, lastModifiedBy, ...clean } = data;
+    return clean;
+  }
+  return data;
+}
+
+export function addVersionMetadata(data: any, lastModifiedBy: string = "restore:user"): any {
+  if (typeof data === "object" && data !== null && !Array.isArray(data)) {
+    const timestamp = Date.now();
+    return {
+      ...data,
+      lastModifiedAt: timestamp,
+      lastModifiedBy,
+    };
+  }
+  return data;
+}
+
+export async function safeReadJsonFile(filePath: string): Promise<any> {
+  try {
+    await fs.access(filePath);
+  } catch (error: any) {
+    if (error.code === "ENOENT") {
+      throw new Error("File not found");
+    }
+    throw new Error(`Cannot access file: ${error.message}`);
+  }
+
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(content);
+  } catch (error: any) {
+    if (error instanceof SyntaxError) {
+      throw new Error("Invalid JSON format");
+    }
+    throw new Error(`Failed to read file: ${error.message}`);
+  }
+}
+
+export async function safeWriteJsonFile(filePath: string, data: any): Promise<void> {
+  try {
+    // Ensure directory exists
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+
+    const jsonContent = JSON.stringify(data, null, 2);
+
+    // Atomic write: write to temp file, then rename
+    const tempPath = `${filePath}.tmp`;
+    await fs.writeFile(tempPath, jsonContent, "utf-8");
+    await fs.rename(tempPath, filePath);
+  } catch (error: any) {
+    // Clean up temp file if it exists
+    try {
+      await fs.unlink(`${filePath}.tmp`);
+    } catch {}
+
+    throw new Error(`Failed to write file: ${error.message}`);
+  }
+}
+
+export { REDIS_KEYS_DIR };
+```
+
+**Error types handled:**
+
+- ✅ File not found (ENOENT)
+- ✅ Invalid JSON syntax
+- ✅ Permission denied (EACCES)
+- ✅ Disk full (ENOSPC)
+- ✅ Directory doesn't exist (create recursively)
+- ✅ Partial writes (atomic write via temp file + rename)
+
+---
+
+#### Step 7.5.3: Add RedisAPI Endpoints
+
+**File**: `src/server/RedisAPI.ts`
+
+**Add imports:**
+
+```typescript
+import {
+  keyToFileName,
+  listVariantsForKey,
+  stripVersionMetadata,
+  addVersionMetadata,
+  safeReadJsonFile,
+  safeWriteJsonFile,
+  REDIS_KEYS_DIR,
+} from "./redis-file-utils";
+import { isValidVariant } from "@/shared/variantUtils";
+```
+
+**Update configureRoutes():**
+
+```typescript
+private configureRoutes() {
+  this.app.post("/api/items", async (req, res) => {
+    await this.onMessage(req, res);
+  });
+
+  this.app.post("/api/save-restore/save-keys", async (req, res) => {
+    await this.saveKeysToFiles(req, res);
+  });
+
+  this.app.post("/api/save-restore/restore-keys", async (req, res) => {
+    await this.restoreKeysFromFiles(req, res);
+  });
+
+  this.app.get("/api/save-restore/list-variants", async (req, res) => {
+    await this.listVariants(req, res);
+  });
+}
+```
+
+**Add endpoint methods:**
+
+```typescript
+private async saveKeysToFiles(req: Request, res: Response) {
+  try {
+    const { keys, variant = "default", stripVersionFields = true } = req.body;
+
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return res.status(400).json({ error: "keys array is required" });
+    }
+
+    if (!isValidVariant(variant)) {
+      return res.status(400).json({ error: "Invalid variant name" });
+    }
+
+    const saved: { key: string; variant: string }[] = [];
+    const errors: { key: string; error: string }[] = [];
+
+    for (const key of keys) {
+      try {
+        const raw = await this.redis.get(key);
+        if (!raw) {
+          errors.push({ key, error: "Key not found in Redis" });
+          continue;
+        }
+
+        let data = JSON.parse(raw);
+        if (stripVersionFields) {
+          data = stripVersionMetadata(data);
+        }
+
+        const fileName = keyToFileName(key, variant);
+        const filePath = path.join(REDIS_KEYS_DIR, fileName);
+
+        await safeWriteJsonFile(filePath, { key, type: "string", data });
+        saved.push({ key, variant });
+      } catch (error: any) {
+        errors.push({ key, error: error.message });
+      }
+    }
+
+    res.json({ success: true, saved, errors: errors.length > 0 ? errors : undefined });
+  } catch (error: any) {
+    console.error("Error in saveKeysToFiles:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+private async restoreKeysFromFiles(req: Request, res: Response) {
+  try {
+    const {
+      keys,
+      variant = "default",
+      addVersionFields = true,
+      versionOptions = {}
+    } = req.body;
+
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return res.status(400).json({ error: "keys array is required" });
+    }
+
+    if (!isValidVariant(variant)) {
+      return res.status(400).json({ error: "Invalid variant name" });
+    }
+
+    const restored: { key: string; variant: string }[] = [];
+    const errors: { key: string; variant: string; error: string }[] = [];
+
+    for (const key of keys) {
+      try {
+        const fileName = keyToFileName(key, variant);
+        const filePath = path.join(REDIS_KEYS_DIR, fileName);
+
+        const fileData = await safeReadJsonFile(filePath);
+        let { data } = fileData;
+
+        if (addVersionFields) {
+          data = addVersionMetadata(data, versionOptions.lastModifiedBy || "restore:user");
+        }
+
+        // Store to Redis
+        await this.redis.set(key, JSON.stringify(data));
+
+        // Update display:config:list if it's a display config
+        if (key.startsWith("display:config:")) {
+          const id = key.replace("display:config:", "");
+          await this.redis.sAdd("display:config:list", id);
+        }
+
+        restored.push({ key, variant });
+      } catch (error: any) {
+        errors.push({ key, variant, error: error.message });
+      }
+    }
+
+    res.json({ success: true, restored, errors: errors.length > 0 ? errors : undefined });
+  } catch (error: any) {
+    console.error("Error in restoreKeysFromFiles:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+private async listVariants(req: Request, res: Response) {
+  try {
+    const { key } = req.query;
+
+    if (!key || typeof key !== "string") {
+      return res.status(400).json({ error: "key query parameter is required" });
+    }
+
+    const variants = await listVariantsForKey(key);
+    res.json({ success: true, key, variants });
+  } catch (error: any) {
+    console.error("Error listing variants:", error);
+    res.status(500).json({ error: error.message });
+  }
+}
+```
+
+---
+
+#### Step 7.5.4: Create Frontend Composable
+
+**File**: `src/composables/useRedisFileSync.ts` (new)
+
+**Purpose**: Generic, reusable composable for save/restore operations from any component.
+
+```typescript
+import { ref } from "vue";
+import { useToaster } from "./useToaster";
+import { sanitizeVariant, isValidVariant, generateBackupVariant } from "@/shared/variantUtils";
+
+const API_BASE = "http://localhost:3000/api/save-restore";
+
+export function useRedisFileSync() {
+  const { emitToast } = useToaster();
+  const isSaving = ref(false);
+  const isRestoring = ref(false);
+
+  async function saveKeysToFiles(
+    keys: string[],
+    variant: string = "default",
+    stripVersionFields: boolean = true
+  ): Promise<boolean> {
+    if (!isValidVariant(variant)) {
+      emitToast({ title: "Invalid variant name", type: "error", deliverTo: "all" });
+      return false;
+    }
+
+    isSaving.value = true;
+    try {
+      const response = await fetch(`${API_BASE}/save-keys`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keys, variant, stripVersionFields }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        const count = result.saved.length;
+        emitToast({
+          title: `Saved ${count} key${count !== 1 ? "s" : ""} as variant '${variant}'`,
+          type: "success",
+          deliverTo: "all",
+        });
+        if (result.errors) {
+          console.warn("Some keys failed to save:", result.errors);
+        }
+        return true;
+      } else {
+        emitToast({ title: "Failed to save keys", type: "error", deliverTo: "all" });
+        return false;
+      }
+    } catch (e) {
+      console.error(e);
+      emitToast({ title: "Error saving keys to files", type: "error", deliverTo: "all" });
+      return false;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  async function restoreKeysFromFiles(
+    keys: string[],
+    variant: string = "default",
+    addVersionFields: boolean = true
+  ): Promise<boolean> {
+    if (!isValidVariant(variant)) {
+      emitToast({ title: "Invalid variant name", type: "error", deliverTo: "all" });
+      return false;
+    }
+
+    isRestoring.value = true;
+    try {
+      const response = await fetch(`${API_BASE}/restore-keys`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keys,
+          variant,
+          addVersionFields,
+          versionOptions: { lastModifiedBy: "restore:user" },
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        const count = result.restored.length;
+        emitToast({
+          title: `Restored ${count} key${count !== 1 ? "s" : ""} from variant '${variant}'`,
+          type: "success",
+          deliverTo: "all",
+        });
+        if (result.errors) {
+          console.warn("Some keys failed to restore:", result.errors);
+        }
+        return true;
+      } else {
+        emitToast({ title: "Failed to restore keys", type: "error", deliverTo: "all" });
+        return false;
+      }
+    } catch (e) {
+      console.error(e);
+      emitToast({ title: "Error restoring keys from files", type: "error", deliverTo: "all" });
+      return false;
+    } finally {
+      isRestoring.value = false;
+    }
+  }
+
+  async function listVariantsForKey(key: string): Promise<string[]> {
+    try {
+      const response = await fetch(`${API_BASE}/list-variants?key=${encodeURIComponent(key)}`);
+      const result = await response.json();
+      return result.variants || [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
+  return {
+    isSaving,
+    isRestoring,
+    saveKeysToFiles,
+    restoreKeysFromFiles,
+    listVariantsForKey,
+    sanitizeVariant,
+    isValidVariant,
+    generateBackupVariant,
+  };
+}
+```
+
+**Benefits:**
+
+- ✅ Reusable across entire app (any component can save/restore any keys)
+- ✅ Centralized error handling and toasts
+- ✅ Loading states exposed for UI feedback
+- ✅ Type-safe and consistent
+
+---
+
+#### Step 7.5.5: Update DisplayConfigsList to Use Composable
+
+**File**: `src/components/Pages/ConfigPage/views/displays/DisplayConfigsList.vue`
+
+**Add to script setup:**
+
+```typescript
+import { useRedisFileSync } from "@/composables/useRedisFileSync";
+
+const { isSaving, isRestoring, saveKeysToFiles, restoreKeysFromFiles, listVariantsForKey, generateBackupVariant } =
+  useRedisFileSync();
+
+async function saveToFiles() {
+  const variant = prompt("Enter variant name:", "default");
+  if (!variant) return;
+
+  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  await saveKeysToFiles(allKeys, variant, true);
+}
+
+async function restoreFromFiles() {
+  // Optionally list variants first
+  const sampleKey = `display:config:${displayConfigs.value[0]?.id}`;
+  const variants = await listVariantsForKey(sampleKey);
+
+  const variantList = variants.length > 0 ? `\nAvailable: ${variants.join(", ")}` : "";
+  const variant = prompt(`Restore from variant:${variantList}`, "default");
+  if (!variant) return;
+
+  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  const success = await restoreKeysFromFiles(allKeys, variant, true);
+
+  if (success) {
+    await loadDisplayConfigs(); // Reload to show updated data
+  }
+}
+
+async function quickSaveAsBackup() {
+  const variant = generateBackupVariant(); // "backup-2024-10-16-14-30-45"
+  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  await saveKeysToFiles(allKeys, variant, true);
+}
+```
+
+**Add to template:**
+
+```vue
+<div class="flex gap-2">
+  <Button @click="saveToFiles" variant="outline" :disabled="isSaving">
+    <Save class="mr-2 h-4 w-4" />
+    {{ isSaving ? "Saving..." : "Save to File" }}
+  </Button>
+  <Button @click="restoreFromFiles" variant="outline" :disabled="isRestoring">
+    <Upload class="mr-2 h-4 w-4" />
+    {{ isRestoring ? "Restoring..." : "Restore from File" }}
+  </Button>
+  <Button @click="quickSaveAsBackup" variant="outline" :disabled="isSaving" title="Quick backup with timestamp">
+    <Save class="mr-2 h-4 w-4" />
+    Quick Backup
+  </Button>
+  <Button @click="createNew">
+    <Plus class="mr-2 h-4 w-4" />
+    Create Display
+  </Button>
+</div>
+```
+
+---
+
+#### API Contracts
+
+**1. Save Keys to Files**
+
+**Endpoint**: `POST /api/save-restore/save-keys`
+
+**Request**:
+
+```typescript
+{
+  keys: string[],              // Required: ["display:config:foo", ...]
+  variant?: string,            // Optional: "backup-2024-10-16" (default: "default")
+  stripVersionFields?: boolean // Optional: true (default)
+}
+```
+
+**Response**:
+
+```typescript
+{
+  success: true,
+  saved: [
+    { key: "display:config:mission-control", variant: "default" },
+    { key: "display:config:launch", variant: "default" }
+  ],
+  errors?: [  // Optional: only present if some keys failed
+    { key: "display:config:missing", error: "Key not found in Redis" }
+  ]
+}
+```
+
+---
+
+**2. Restore Keys from Files**
+
+**Endpoint**: `POST /api/save-restore/restore-keys`
+
+**Request**:
+
+```typescript
+{
+  keys: string[],                    // Required: ["display:config:foo", ...]
+  variant?: string,                  // Optional: "backup-2024-10-16" (default: "default")
+  addVersionFields?: boolean,        // Optional: true (default)
+  versionOptions?: {
+    lastModifiedBy?: string,         // Optional: "restore:user" (default)
+    overwriteIfPresent?: boolean     // Optional: true (default)
+  }
+}
+```
+
+**Response**:
+
+```typescript
+{
+  success: true,
+  restored: [
+    { key: "display:config:mission-control", variant: "default" }
+  ],
+  errors?: [  // Optional: only present if some keys failed
+    { key: "display:config:missing", variant: "backup", error: "File not found" }
+  ]
+}
+```
+
+---
+
+**3. List Available Variants**
+
+**Endpoint**: `GET /api/save-restore/list-variants?key=display:config:mission-control`
+
+**Response**:
+
+```typescript
+{
+  success: true,
+  key: "display:config:mission-control",
+  variants: ["default", "backup-2024-10-16-14-30-45", "launch-day"]
+}
+```
+
+---
+
+#### Directory Structure Updates
+
+```
+src/
+├── shared/                         # NEW: Shared between server and client
+│   └── variantUtils.ts            # Variant validation/sanitization
+├── server/
+│   ├── redis-file-utils.ts        # NEW: File I/O utilities
+│   ├── redis-loader.ts            # EXISTING: Enhanced with version injection
+│   └── RedisAPI.ts                # UPDATE: Add generic save/restore endpoints
+└── composables/
+    └── useRedisFileSync.ts        # NEW: Frontend file sync composable
+```
+
+---
+
+#### Implementation Checklist
+
+- [ ] Create `src/shared/variantUtils.ts` with sanitization/validation
+- [ ] Create `src/server/redis-file-utils.ts` with file I/O helpers
+- [ ] Update `src/server/RedisAPI.ts` with 3 new endpoints under `/api/save-restore/*`
+- [ ] Create `src/composables/useRedisFileSync.ts` frontend composable
+- [ ] Update `DisplayConfigsList.vue` to use the composable
+- [ ] Test happy path (save/restore with default variant)
+- [ ] Test error cases (missing keys, invalid variants, file I/O errors)
+- [ ] Test quick backup feature
+
+---
+
+#### Security Checklist
+
+- [ ] Variant names sanitized on both client and server
+- [ ] Path confinement to `redis-keys/` directory only
+- [ ] No file paths exposed to client responses
+- [ ] Atomic writes prevent partial file corruption
+- [ ] Input validation on all endpoints
+- [ ] Error messages don't leak sensitive info
+
+---
+
+#### Testing Scenarios
+
+**Happy path:**
+
+1. Save all display configs as "default"
+2. Modify configs in UI
+3. Save as "backup-2024-10-16-14-30-45" (quick backup)
+4. Restore from "default"
+5. Verify configs reverted
+
+**Error cases:**
+
+1. Save key that doesn't exist → should skip, report in errors[]
+2. Restore variant that doesn't exist → should skip, report in errors[]
+3. Invalid variant name with `/` or `..` → should reject with 400
+4. Disk full during save → should report error, clean up temp files
+5. Malformed JSON in file → should report error during restore
+
+---
+
+#### Future Enhancements
+
+1. **Variant metadata file**: Store creation date, creator, description
+2. **Variant comparison**: Show diff between two variants before restoring
+3. **Bulk operations**: "Save all display configs", "Restore all from variant X"
+4. **Scheduled snapshots**: Auto-save to `backup-{timestamp}` daily
+5. **Cloud sync**: Upload variants to S3/GitHub
+6. **Variant dialog component**: Better UX than prompt()
 
 ---
 

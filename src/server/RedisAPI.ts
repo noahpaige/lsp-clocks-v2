@@ -3,6 +3,8 @@ import cors from "cors";
 import { Server as SocketServer } from "socket.io";
 import { createClient, RedisClientType } from "redis";
 import { Server as HTTPServer } from "http";
+import fs from "fs/promises";
+import path from "path";
 
 class RedisAPI {
   private app!: Express;
@@ -69,6 +71,14 @@ class RedisAPI {
   private configureRoutes() {
     this.app.post("/api/items", async (req, res) => {
       await this.onMessage(req, res);
+    });
+
+    this.app.post("/api/display-configs/save-to-files", async (req, res) => {
+      await this.saveDisplayConfigsToFiles(req, res);
+    });
+
+    this.app.post("/api/display-configs/restore-from-files", async (req, res) => {
+      await this.restoreDisplayConfigsFromFiles(req, res);
     });
   }
 
@@ -196,6 +206,57 @@ class RedisAPI {
 
       this.io.to(key).emit("redis-update", { key, event, data });
     });
+  }
+
+  private async saveDisplayConfigsToFiles(req: Request, res: Response) {
+    try {
+      const configIds = await this.redis.sMembers("display:config:list");
+      const savedFiles: string[] = [];
+
+      for (const id of configIds) {
+        const raw = await this.redis.get(`display:config:${id}`);
+        if (!raw) continue;
+
+        const config = JSON.parse(raw);
+        // Strip version metadata
+        const { lastModifiedAt, lastModifiedBy, ...cleanConfig } = config;
+
+        const fileName = `display-config-${id}.json`;
+        const filePath = path.resolve(__dirname, "../../redis-keys", fileName);
+        const fileContent = JSON.stringify(
+          { key: `display:config:${id}`, type: "string", data: cleanConfig },
+          null,
+          2
+        );
+
+        await fs.writeFile(filePath, fileContent, "utf-8");
+        savedFiles.push(fileName);
+      }
+
+      res.json({ success: true, saved: savedFiles });
+    } catch (error: any) {
+      console.error("Error saving display configs to files:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  private async restoreDisplayConfigsFromFiles(req: Request, res: Response) {
+    try {
+      const { loadAllRedisKeys } = await import("./redis-loader");
+      const redisKeysFolder = path.resolve(__dirname, "../../redis-keys");
+
+      await loadAllRedisKeys(redisKeysFolder, "redis://localhost:6379", {
+        addVersion: true,
+        lastModifiedBy: "restore:user",
+        keyPattern: /^display:config:/,
+        overwriteIfPresent: true,
+      });
+
+      res.json({ success: true, message: "Display configs restored from files" });
+    } catch (error: any) {
+      console.error("Error restoring display configs from files:", error);
+      res.status(500).json({ error: error.message });
+    }
   }
 }
 
