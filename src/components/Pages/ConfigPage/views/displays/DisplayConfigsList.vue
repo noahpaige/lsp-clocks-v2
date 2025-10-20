@@ -14,8 +14,7 @@ import { useRedisFileSync } from "@/composables/useRedisFileSync";
 const router = useRouter();
 const { displayConfigs, isLoading, loadDisplayConfigs, deleteDisplayConfig, duplicateDisplayConfig } =
   useDisplayConfigs();
-const { isSaving, isRestoring, saveKeysToFiles, restoreKeysFromFiles, listVariantsForKey, generateBackupVariant } =
-  useRedisFileSync();
+const { isSaving, isRestoring, saveKeysToFiles, restoreKeysFromFiles, listVariantsForKey } = useRedisFileSync();
 
 const searchQuery = ref("");
 const showPreview = ref(false);
@@ -89,12 +88,6 @@ async function restoreFromFiles() {
     await loadDisplayConfigs();
   }
 }
-
-async function quickSaveAsBackup() {
-  const variant = generateBackupVariant();
-  const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
-  await saveKeysToFiles(allKeys, variant, true);
-}
 </script>
 
 <template>
@@ -112,10 +105,6 @@ async function quickSaveAsBackup() {
         <Button @click="restoreFromFiles" variant="outline" :disabled="isRestoring">
           <Upload class="mr-2 h-4 w-4" />
           {{ isRestoring ? "Restoring..." : "Restore from File" }}
-        </Button>
-        <Button @click="quickSaveAsBackup" variant="outline" :disabled="isSaving" title="Quick backup with timestamp">
-          <Save class="mr-2 h-4 w-4" />
-          Quick Backup
         </Button>
         <Button @click="createNew">
           <Plus class="mr-2 h-4 w-4" />
