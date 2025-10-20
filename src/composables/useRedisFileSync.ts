@@ -1,6 +1,6 @@
 import { ref } from "vue";
 import { useToaster } from "./useToaster";
-import { sanitizeVariant, isValidVariant, generateBackupVariant } from "@/shared/variantUtils";
+import { sanitizeVariant, isValidVariant } from "@/shared/variantUtils";
 
 const API_BASE = "http://localhost:3000/api/save-restore";
 
@@ -119,6 +119,5 @@ export function useRedisFileSync() {
     listVariantsForKey,
     sanitizeVariant,
     isValidVariant,
-    generateBackupVariant,
   };
 }

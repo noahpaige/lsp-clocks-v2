@@ -63,11 +63,7 @@ const launchAllDisplays = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Active Displays</CardTitle>
-          <CardDescription>Control individual display windows</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent class="p-0">
           <Table>
             <TableHeader>
               <TableRow>

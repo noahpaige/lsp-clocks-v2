@@ -2400,16 +2400,6 @@ export function sanitizeVariant(variant: string): string {
 export function isValidVariant(variant: string): boolean {
   return /^[a-zA-Z0-9-_]{1,50}$/.test(variant);
 }
-
-/**
- * Generate timestamp-based variant name
- */
-export function generateBackupVariant(): string {
-  const now = new Date();
-  const date = now.toISOString().split("T")[0]; // YYYY-MM-DD
-  const time = now.toTimeString().split(" ")[0].replace(/:/g, "-"); // HH-MM-SS
-  return `backup-${date}-${time}`;
-}
 ```
 
 **Why shared?**
@@ -2859,7 +2849,6 @@ export function useRedisFileSync() {
     listVariantsForKey,
     sanitizeVariant,
     isValidVariant,
-    generateBackupVariant,
   };
 }
 ```
@@ -2882,8 +2871,7 @@ export function useRedisFileSync() {
 ```typescript
 import { useRedisFileSync } from "@/composables/useRedisFileSync";
 
-const { isSaving, isRestoring, saveKeysToFiles, restoreKeysFromFiles, listVariantsForKey, generateBackupVariant } =
-  useRedisFileSync();
+const { isSaving, isRestoring, saveKeysToFiles, restoreKeysFromFiles, listVariantsForKey } = useRedisFileSync();
 
 async function saveToFiles() {
   const variant = prompt("Enter variant name:", "default");
@@ -2895,7 +2883,9 @@ async function saveToFiles() {
 
 async function restoreFromFiles() {
   // Optionally list variants first
-  const sampleKey = `clock-display-config:${displayConfigs.value[0]?.id}`;
+  const sampleKey = displayConfigs.value[0]
+    ? `clock-display-config:${displayConfigs.value[0].id}`
+    : "clock-display-config:default";
   const variants = await listVariantsForKey(sampleKey);
 
   const variantList = variants.length > 0 ? `\nAvailable: ${variants.join(", ")}` : "";
@@ -2908,12 +2898,6 @@ async function restoreFromFiles() {
   if (success) {
     await loadDisplayConfigs(); // Reload to show updated data
   }
-}
-
-async function quickSaveAsBackup() {
-  const variant = generateBackupVariant(); // "backup-2024-10-16-14-30-45"
-  const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
-  await saveKeysToFiles(allKeys, variant, true);
 }
 ```
 
@@ -2928,10 +2912,6 @@ async function quickSaveAsBackup() {
   <Button @click="restoreFromFiles" variant="outline" :disabled="isRestoring">
     <Upload class="mr-2 h-4 w-4" />
     {{ isRestoring ? "Restoring..." : "Restore from File" }}
-  </Button>
-  <Button @click="quickSaveAsBackup" variant="outline" :disabled="isSaving" title="Quick backup with timestamp">
-    <Save class="mr-2 h-4 w-4" />
-    Quick Backup
   </Button>
   <Button @click="createNew">
     <Plus class="mr-2 h-4 w-4" />
@@ -3048,20 +3028,26 @@ src/
 - [x] Update `src/server/RedisAPI.ts` with 3 new endpoints under `/api/save-restore/*`
 - [x] Create `src/composables/useRedisFileSync.ts` frontend composable
 - [x] Update `DisplayConfigsList.vue` to use the composable
+- [x] Remove redundant Quick Backup feature (Oct 20, 2025)
 - [ ] Test happy path (save/restore with default variant)
 - [ ] Test error cases (missing keys, invalid variants, file I/O errors)
-- [ ] Test quick backup feature
 
 **Status (Oct 16, 2025):**
 
 - ✅ Implemented all 5 steps of Phase 7.5
-- ✅ Created shared `variantUtils.ts` with `sanitizeVariant`, `isValidVariant`, `generateBackupVariant` (includes time)
+- ✅ Created shared `variantUtils.ts` with `sanitizeVariant`, `isValidVariant`
 - ✅ Created `redis-file-utils.ts` with `addVersionMetadata` helper, file I/O with comprehensive error handling
 - ✅ Replaced display-specific endpoints with generic `/api/save-restore/*` routes
 - ✅ Created reusable `useRedisFileSync` composable
-- ✅ Updated `DisplayConfigsList` with 3 buttons: Save to File, Restore from File, Quick Backup
+- ✅ Updated `DisplayConfigsList` with 2 buttons: Save to File, Restore from File
 - ✅ API responses only return key/variant pairs (no file paths)
 - Ready for testing
+
+**Status (Oct 20, 2025):**
+
+- ✅ Removed redundant Quick Backup feature for simplified UI
+- ✅ Removed `generateBackupVariant` function from `variantUtils.ts`
+- Users can manually create timestamped backups by entering variant names like "backup-2025-10-20"
 
 ---
 
@@ -3082,7 +3068,7 @@ src/
 
 1. Save all display configs as "default"
 2. Modify configs in UI
-3. Save as "backup-2024-10-16-14-30-45" (quick backup)
+3. Save as "backup-2025-10-20" (manual timestamped backup)
 4. Restore from "default"
 5. Verify configs reverted
 
@@ -3101,9 +3087,9 @@ src/
 1. **Variant metadata file**: Store creation date, creator, description
 2. **Variant comparison**: Show diff between two variants before restoring
 3. **Bulk operations**: "Save all display configs", "Restore all from variant X"
-4. **Scheduled snapshots**: Auto-save to `backup-{timestamp}` daily
+4. **Scheduled snapshots**: Auto-save to timestamped variants daily
 5. **Cloud sync**: Upload variants to S3/GitHub
-6. **Variant dialog component**: Better UX than prompt()
+6. **Variant dialog component**: Better UX than prompt() with variant browser/selector
 
 ---
 
