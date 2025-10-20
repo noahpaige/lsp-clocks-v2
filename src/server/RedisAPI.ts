@@ -104,7 +104,7 @@ class RedisAPI {
     const cmdInfo = typeToCommandMap.get(type);
 
     if (!cmdInfo) {
-      if (type === "none") throw new Error(`Key "${key}" does not exist.`);
+      if (type === "none") return null; // Key doesn't exist yet
       throw new Error(`Unsupported Redis type: ${type}`);
     }
 
@@ -201,7 +201,7 @@ class RedisAPI {
     this.subscriber.pSubscribe("__keyspace@0__:*", async (message, channel) => {
       // Convert the event message to uppercase.
       const event = message.toUpperCase();
-      const key = channel.split(":")[1];
+      const key = channel.replace("__keyspace@0__:", "");
       console.log(`Redis key updated: ${key}, Event: ${event}`);
 
       // Look up the retrieval command based on the uppercase event.

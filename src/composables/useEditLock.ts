@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import { useRedisCommand } from "./useRedisCommand";
+import { useRedisObserver } from "./useRedisObserver";
 import { useSessionId } from "./useSessionId";
 import { parseEditLock, type EditLock } from "@/types/EditLock";
 
@@ -8,6 +9,7 @@ const LOCK_REFRESH_INTERVAL_MS = 60000; // 1 minute
 
 export function useEditLock() {
   const { sendInstantCommand } = useRedisCommand();
+  const { addObserver } = useRedisObserver();
   const { sessionId, userName } = useSessionId();
 
   const activeIntervals = ref<Map<string, NodeJS.Timeout>>(new Map());
@@ -113,10 +115,63 @@ export function useEditLock() {
     activeIntervals.value.forEach((_, id) => stopRefresh(id));
   }
 
+  /**
+   * Observe real-time changes to a lock using Redis pub/sub
+   * @param redisKey - The resource key (e.g., "clock-display-config:foo")
+   * @param callback - Called when lock changes, receives EditLock | null
+   */
+  function observeLock(redisKey: string, callback: (lock: EditLock | null) => void) {
+    const lockKey = getLockKey(redisKey);
+    console.log(`[useEditLock] Setting up observer for lock: ${redisKey} (lock key: ${lockKey})`);
+
+    addObserver(lockKey, (response: { key: string; data: any; event: string }) => {
+      try {
+        console.log(`[useEditLock] Observer callback triggered for ${redisKey}:`, {
+          event: response.event,
+          dataType: typeof response.data,
+          data: response.data,
+        });
+        const raw = response.data;
+
+        // Lock was deleted or doesn't exist
+        if (!raw || raw === null || raw === "") {
+          console.log(`[useEditLock] Observer detected lock removed/absent for: ${redisKey}`);
+          callback(null);
+          return;
+        }
+
+        // Parse lock data
+        if (typeof raw === "string") {
+          const parsed = parseEditLock(JSON.parse(raw));
+          console.log(`[useEditLock] Observer detected lock update for: ${redisKey}`, parsed);
+
+          // Check if lock is expired
+          if (parsed.expires < Date.now()) {
+            console.log(`[useEditLock] Observer found expired lock for: ${redisKey}`);
+            callback(null);
+            return;
+          }
+
+          // Return the lock regardless of who owns it
+          // The callback can decide how to handle own vs others' locks
+          console.log(`[useEditLock] Calling callback with lock owned by: ${parsed.userName}`);
+          callback(parsed);
+        } else {
+          console.warn(`[useEditLock] Observer received unexpected data type for ${redisKey}:`, typeof raw);
+          callback(null);
+        }
+      } catch (error) {
+        console.error(`[useEditLock] Error parsing lock data for ${redisKey}:`, error);
+        callback(null);
+      }
+    });
+  }
+
   return {
     acquireLock,
     releaseLock,
     checkLock,
     releaseAllLocks,
+    observeLock,
   };
 }

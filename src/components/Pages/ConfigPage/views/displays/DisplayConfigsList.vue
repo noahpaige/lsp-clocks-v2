@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Edit, Copy, Trash2, Eye, Save, Upload } from "lucide-vue-next";
 import DisplayPreview from "./DisplayPreview.vue";
+import LockWidget from "@/components/shared/LockWidget.vue";
 import { useRedisFileSync } from "@/composables/useRedisFileSync";
 
 const router = useRouter();
@@ -147,6 +148,7 @@ async function restoreFromFiles() {
               >
               <TableCell class="text-right">
                 <div class="flex items-center justify-end gap-2">
+                  <LockWidget :config-id="config.id" :config-name="config.name" />
                   <Button @click="previewConfig(config.id)" variant="ghost" size="icon" title="Preview">
                     <Eye class="h-4 w-4" />
                   </Button>

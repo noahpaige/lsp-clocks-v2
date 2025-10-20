@@ -31,6 +31,9 @@ export function useRedisObserver() {
 
       sendInstantCommand("**GETALL**", key).then(({ data, error }) => {
         if (!error) {
+          if (data === null) {
+            console.warn(`Key "${key}" does not exist, but subscriber was created anyway.`);
+          }
           callback({ key, data, event: INITIAL_EVENT });
         } else {
           console.error(`Failed to fetch current value for key "${key}"`, error);
@@ -98,6 +101,9 @@ export function useRedisObserver() {
 
       sendInstantCommand("**GETALL**", key).then(({ data, error }) => {
         if (!error) {
+          if (data === null) {
+            console.warn(`Key "${key}" does not exist, but subscriber was created anyway.`);
+          }
           callback({ key, data, event: INITIAL_EVENT });
         } else {
           console.error(`Failed to fetch current value for key "${key}"`, error);
