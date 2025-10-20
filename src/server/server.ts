@@ -20,9 +20,7 @@ const redisKeysFolder = path.resolve(__dirname, "../../redis-keys");
   // Launch Redis DB FIRST! before Redis API and loading redis keys
   await launchRedisDB();
   await loadAllRedisKeys(redisKeysFolder, "redis://localhost:6379", {
-    addVersion: true,
     lastModifiedBy: "seed:init",
-    keyPattern: /^display:config:/,
     overwriteIfPresent: true,
   });
   await RedisAPI.init(app, server);

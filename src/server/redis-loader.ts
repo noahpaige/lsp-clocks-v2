@@ -2,6 +2,13 @@ import { RedisClientType, createClient } from "redis";
 import fs from "fs/promises";
 import path from "path";
 
+// Central REGEX registry of key patterns that should automatically get version metadata
+// if you want a key (or keys) to automatically get version metadata, add the regex to this array
+const VERSIONED_KEY_PATTERNS = [
+  /^display:config:/,
+  // Add more patterns here as needed
+];
+
 let redisInstance: RedisClientType | null = null;
 
 async function getRedisInstance(redisUrl: string = "redis://localhost:6379"): Promise<RedisClientType> {
@@ -14,9 +21,7 @@ async function getRedisInstance(redisUrl: string = "redis://localhost:6379"): Pr
 }
 
 export interface RedisLoaderOptions {
-  addVersion?: boolean;
   lastModifiedBy?: string;
-  keyPattern?: RegExp;
   overwriteIfPresent?: boolean;
 }
 
@@ -121,13 +126,12 @@ async function storeInRedis(
     return;
   }
 
-  // Apply versioning if requested
+  // Automatically apply versioning if the key matches any pattern in VERSIONED_KEY_PATTERNS
   let finalData = data;
-  if (options?.addVersion && type.toLowerCase() === "string") {
-    const pattern = options.keyPattern || /^display:config:/;
-    if (pattern.test(key)) {
-      finalData = injectVersionMetadata(data, options);
-    }
+  const shouldVersion = type.toLowerCase() === "string" && VERSIONED_KEY_PATTERNS.some((pattern) => pattern.test(key));
+
+  if (shouldVersion) {
+    finalData = injectVersionMetadata(data, options || {});
   }
 
   const command = redisCommands[type.toLowerCase()];
