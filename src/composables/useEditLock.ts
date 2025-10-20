@@ -25,20 +25,27 @@ export function useEditLock() {
         timestamp: Date.now(),
         expires: Date.now() + LOCK_DURATION_MS,
       };
-      await sendInstantCommand("SET", getLockKey(redisKey), [JSON.stringify(lock), "EX", "300"]);
+      const lockKey = getLockKey(redisKey);
+      console.log(`[useEditLock] Acquiring lock for key: ${redisKey} (lock key: ${lockKey})`);
+      console.log(`[useEditLock] Session: ${sessionId.value}, User: ${userName.value}`);
+      await sendInstantCommand("SET", lockKey, [JSON.stringify(lock), "EX", "300"]);
+      console.log(`[useEditLock] Lock acquired successfully for: ${redisKey}`);
       startRefresh(redisKey);
       return lock;
     } catch (e) {
-      console.error("Failed to acquire lock", e);
+      console.error(`[useEditLock] Failed to acquire lock for ${redisKey}:`, e);
       return null;
     }
   }
 
   async function releaseLock(redisKey: string): Promise<void> {
     try {
-      await sendInstantCommand("DEL", getLockKey(redisKey));
+      const lockKey = getLockKey(redisKey);
+      console.log(`[useEditLock] Releasing lock for key: ${redisKey} (lock key: ${lockKey})`);
+      await sendInstantCommand("DEL", lockKey);
+      console.log(`[useEditLock] Lock released successfully for: ${redisKey}`);
     } catch (e) {
-      console.error("Failed to release lock", e);
+      console.error(`[useEditLock] Failed to release lock for ${redisKey}:`, e);
     } finally {
       stopRefresh(redisKey);
     }
@@ -46,18 +53,30 @@ export function useEditLock() {
 
   async function checkLock(redisKey: string): Promise<EditLock | null> {
     try {
-      const resp = await sendInstantCommand("GET", getLockKey(redisKey));
+      const lockKey = getLockKey(redisKey);
+      console.log(`[useEditLock] Checking lock for key: ${redisKey} (lock key: ${lockKey})`);
+      const resp = await sendInstantCommand("GET", lockKey);
       const raw = resp?.data;
-      if (!raw || typeof raw !== "string") return null;
+      if (!raw || typeof raw !== "string") {
+        console.log(`[useEditLock] No lock found for: ${redisKey}`);
+        return null;
+      }
       const parsed = parseEditLock(JSON.parse(raw));
+      console.log(`[useEditLock] Found lock:`, parsed);
+
       if (parsed.expires < Date.now()) {
+        console.log(`[useEditLock] Lock expired for: ${redisKey}, releasing`);
         await releaseLock(redisKey);
         return null;
       }
-      if (parsed.sessionId === sessionId.value) return null;
+      if (parsed.sessionId === sessionId.value) {
+        console.log(`[useEditLock] Lock is owned by current session, ignoring`);
+        return null;
+      }
+      console.log(`[useEditLock] Lock is held by another user: ${parsed.userName}`);
       return parsed;
     } catch (e) {
-      console.error("Failed to check lock", e);
+      console.error(`[useEditLock] Failed to check lock for ${redisKey}:`, e);
       return null;
     }
   }

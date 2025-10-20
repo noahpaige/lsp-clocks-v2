@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useDisplayConfigs } from "@/composables/useDisplayConfigs";
 import { useEditLock } from "@/composables/useEditLock";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Save, X } from "lucide-vue-next";
+import { Plus, Save, X, AlertCircle } from "lucide-vue-next";
 import RowEditor from "./RowEditor.vue";
 
 const route = useRoute();
@@ -44,11 +44,23 @@ onMounted(async () => {
       // @ts-ignore
       originalLastModifiedAt.value = existing.lastModifiedAt || 0;
 
+      // Check if someone else is editing before acquiring our lock
       lockInfo.value = await checkLock(`clock-display-config:${configId.value}`);
-      await acquireLock(`clock-display-config:${configId.value}`);
+
+      // Acquire our own lock
+      const lockResult = await acquireLock(`clock-display-config:${configId.value}`);
+      console.log("[DisplayConfigEditor] Lock acquired:", lockResult);
     } else {
       router.push("/config/display-configs");
     }
+  }
+});
+
+// Release lock when navigating away or closing tab
+onBeforeUnmount(async () => {
+  if (isEditMode.value && configId.value) {
+    console.log("[DisplayConfigEditor] Releasing lock on unmount");
+    await releaseLock(`clock-display-config:${configId.value}`);
   }
 });
 
@@ -84,7 +96,11 @@ async function save() {
       return;
     }
     if (result.success) {
-      if (configId.value) await releaseLock(`clock-display-config:${configId.value}`);
+      // Release lock before navigating away
+      if (configId.value) {
+        console.log("[DisplayConfigEditor] Releasing lock after save");
+        await releaseLock(`clock-display-config:${configId.value}`);
+      }
       router.push("/config/display-configs");
     }
   } else {
@@ -94,7 +110,12 @@ async function save() {
   isSaving.value = false;
 }
 
-function cancel() {
+async function cancel() {
+  // Release lock before navigating away
+  if (isEditMode.value && configId.value) {
+    console.log("[DisplayConfigEditor] Releasing lock on cancel");
+    await releaseLock(`clock-display-config:${configId.value}`);
+  }
   router.push("/config/display-configs");
 }
 
@@ -105,7 +126,12 @@ function handleOverwrite() {
   save();
 }
 
-function handleCancelConflict() {
+async function handleCancelConflict() {
+  // Release lock before navigating away
+  if (isEditMode.value && configId.value) {
+    console.log("[DisplayConfigEditor] Releasing lock on conflict cancel");
+    await releaseLock(`clock-display-config:${configId.value}`);
+  }
   showConflictModal.value = false;
   router.push("/config/display-configs");
 }
@@ -113,6 +139,21 @@ function handleCancelConflict() {
 
 <template>
   <div class="space-y-6">
+    <!-- Lock Warning Banner -->
+    <div v-if="lockInfo" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+      <div class="flex items-start gap-3">
+        <AlertCircle class="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p class="text-sm font-medium text-yellow-800">
+            <strong>{{ lockInfo.userName }}</strong> is currently editing this configuration.
+          </p>
+          <p class="text-xs text-yellow-700 mt-1">
+            You can still make edits, but be aware of potential conflicts when saving.
+          </p>
+        </div>
+      </div>
+    </div>
+
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-3xl font-bold">
