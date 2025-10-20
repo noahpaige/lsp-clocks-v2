@@ -12,21 +12,21 @@ export function useEditLock() {
 
   const activeIntervals = ref<Map<string, NodeJS.Timeout>>(new Map());
 
-  function getLockKey(configId: string) {
-    return `clock-display-config:lock:${configId}`;
+  function getLockKey(redisKey: string) {
+    return `lock:${redisKey}`;
   }
 
-  async function acquireLock(configId: string): Promise<EditLock | null> {
+  async function acquireLock(redisKey: string): Promise<EditLock | null> {
     try {
       const lock: EditLock = {
-        configId,
+        resourceKey: redisKey,
         sessionId: sessionId.value,
         userName: userName.value,
         timestamp: Date.now(),
         expires: Date.now() + LOCK_DURATION_MS,
       };
-      await sendInstantCommand("SET", getLockKey(configId), [JSON.stringify(lock), "EX", "300"]);
-      startRefresh(configId);
+      await sendInstantCommand("SET", getLockKey(redisKey), [JSON.stringify(lock), "EX", "300"]);
+      startRefresh(redisKey);
       return lock;
     } catch (e) {
       console.error("Failed to acquire lock", e);
@@ -34,24 +34,24 @@ export function useEditLock() {
     }
   }
 
-  async function releaseLock(configId: string): Promise<void> {
+  async function releaseLock(redisKey: string): Promise<void> {
     try {
-      await sendInstantCommand("DEL", getLockKey(configId));
+      await sendInstantCommand("DEL", getLockKey(redisKey));
     } catch (e) {
       console.error("Failed to release lock", e);
     } finally {
-      stopRefresh(configId);
+      stopRefresh(redisKey);
     }
   }
 
-  async function checkLock(configId: string): Promise<EditLock | null> {
+  async function checkLock(redisKey: string): Promise<EditLock | null> {
     try {
-      const resp = await sendInstantCommand("GET", getLockKey(configId));
+      const resp = await sendInstantCommand("GET", getLockKey(redisKey));
       const raw = resp?.data;
       if (!raw || typeof raw !== "string") return null;
       const parsed = parseEditLock(JSON.parse(raw));
       if (parsed.expires < Date.now()) {
-        await releaseLock(configId);
+        await releaseLock(redisKey);
         return null;
       }
       if (parsed.sessionId === sessionId.value) return null;
@@ -62,31 +62,31 @@ export function useEditLock() {
     }
   }
 
-  function startRefresh(configId: string) {
-    stopRefresh(configId);
+  function startRefresh(redisKey: string) {
+    stopRefresh(redisKey);
     const interval = setInterval(async () => {
       try {
         const lock: EditLock = {
-          configId,
+          resourceKey: redisKey,
           sessionId: sessionId.value,
           userName: userName.value,
           timestamp: Date.now(),
           expires: Date.now() + LOCK_DURATION_MS,
         };
-        await sendInstantCommand("SET", getLockKey(configId), [JSON.stringify(lock), "EX", "300"]);
+        await sendInstantCommand("SET", getLockKey(redisKey), [JSON.stringify(lock), "EX", "300"]);
       } catch (e) {
         console.error("Failed to refresh lock", e);
-        stopRefresh(configId);
+        stopRefresh(redisKey);
       }
     }, LOCK_REFRESH_INTERVAL_MS);
-    activeIntervals.value.set(configId, interval);
+    activeIntervals.value.set(redisKey, interval);
   }
 
-  function stopRefresh(configId: string) {
-    const existing = activeIntervals.value.get(configId);
+  function stopRefresh(redisKey: string) {
+    const existing = activeIntervals.value.get(redisKey);
     if (existing) {
       clearInterval(existing);
-      activeIntervals.value.delete(configId);
+      activeIntervals.value.delete(redisKey);
     }
   }
 

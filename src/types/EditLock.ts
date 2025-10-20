@@ -1,5 +1,5 @@
 export interface EditLock {
-  configId: string;
+  resourceKey: string;
   sessionId: string;
   userName: string;
   timestamp: number;
@@ -8,7 +8,7 @@ export interface EditLock {
 
 export function parseEditLock(raw: any): EditLock {
   return {
-    configId: raw?.configId ?? "",
+    resourceKey: raw?.resourceKey ?? "",
     sessionId: raw?.sessionId ?? "",
     userName: raw?.userName ?? "Anonymous User",
     timestamp: raw?.timestamp ?? Date.now(),

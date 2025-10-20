@@ -44,8 +44,8 @@ onMounted(async () => {
       // @ts-ignore
       originalLastModifiedAt.value = existing.lastModifiedAt || 0;
 
-      lockInfo.value = await checkLock(configId.value);
-      await acquireLock(configId.value);
+      lockInfo.value = await checkLock(`clock-display-config:${configId.value}`);
+      await acquireLock(`clock-display-config:${configId.value}`);
     } else {
       router.push("/config/display-configs");
     }
@@ -84,7 +84,7 @@ async function save() {
       return;
     }
     if (result.success) {
-      if (configId.value) await releaseLock(configId.value);
+      if (configId.value) await releaseLock(`clock-display-config:${configId.value}`);
       router.push("/config/display-configs");
     }
   } else {
