@@ -67,20 +67,22 @@ async function saveToFiles() {
   const variant = prompt("Enter variant name:", "default");
   if (!variant) return;
 
-  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
   await saveKeysToFiles(allKeys, variant, true);
 }
 
 async function restoreFromFiles() {
   // Optionally list variants first
-  const sampleKey = displayConfigs.value[0] ? `display:config:${displayConfigs.value[0].id}` : "display:config:default";
+  const sampleKey = displayConfigs.value[0]
+    ? `clock-display-config:${displayConfigs.value[0].id}`
+    : "clock-display-config:default";
   const variants = await listVariantsForKey(sampleKey);
 
   const variantList = variants.length > 0 ? `\nAvailable: ${variants.join(", ")}` : "";
   const variant = prompt(`Restore from variant:${variantList}`, "default");
   if (!variant) return;
 
-  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
   const success = await restoreKeysFromFiles(allKeys, variant, true);
 
   if (success) {
@@ -90,7 +92,7 @@ async function restoreFromFiles() {
 
 async function quickSaveAsBackup() {
   const variant = generateBackupVariant();
-  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
   await saveKeysToFiles(allKeys, variant, true);
 }
 </script>

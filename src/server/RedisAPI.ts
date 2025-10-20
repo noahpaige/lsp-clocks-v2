@@ -14,6 +14,7 @@ import {
 } from "./redis-file-utils";
 import { isValidVariant } from "@/shared/variantUtils";
 import path from "path";
+import { executePostRestoreHooks } from "./redis-hooks";
 
 class RedisAPI {
   private app!: Express;
@@ -296,11 +297,8 @@ class RedisAPI {
           // Store to Redis
           await this.redis.set(key, JSON.stringify(data));
 
-          // Update display:config:list if it's a display config
-          if (key.startsWith("display:config:")) {
-            const id = key.replace("display:config:", "");
-            await this.redis.sAdd("display:config:list", id);
-          }
+          // Execute post-restore hooks for this key
+          await executePostRestoreHooks(this.redis, key, data);
 
           restored.push({ key, variant });
         } catch (error: any) {

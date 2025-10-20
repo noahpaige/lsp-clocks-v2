@@ -1,11 +1,12 @@
 import { RedisClientType, createClient } from "redis";
 import fs from "fs/promises";
 import path from "path";
+import { executePostRestoreHooks } from "./redis-hooks";
 
 // Central REGEX registry of key patterns that should automatically get version metadata
 // if you want a key (or keys) to automatically get version metadata, add the regex to this array
 const VERSIONED_KEY_PATTERNS = [
-  /^display:config:/,
+  /^clock-display-config:/,
   // Add more patterns here as needed
 ];
 
@@ -144,6 +145,9 @@ async function storeInRedis(
 
     await command(redis, key, finalData);
     console.log(`Loaded ${key} as ${type} in Redis`);
+
+    // Execute post-restore hooks for this key
+    await executePostRestoreHooks(redis, key, finalData);
   } else {
     console.error(`Unsupported Redis type: ${type}`);
   }

@@ -13,7 +13,7 @@ export function useEditLock() {
   const activeIntervals = ref<Map<string, NodeJS.Timeout>>(new Map());
 
   function getLockKey(configId: string) {
-    return `display:config:lock:${configId}`;
+    return `clock-display-config:lock:${configId}`;
   }
 
   async function acquireLock(configId: string): Promise<EditLock | null> {

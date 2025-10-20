@@ -1,5 +1,5 @@
 {
-  "key": "display:config:all-clocks-default",
+  "key": "clock-display-config:all-clocks-default",
   "type": "string",
   "data": {
     "id": "all-clocks-default",

@@ -1,5 +1,5 @@
 {
-  "key": "display:config:simple-time",
+  "key": "clock-display-config:simple-time",
   "type": "string",
   "data": {
     "id": "simple-time",

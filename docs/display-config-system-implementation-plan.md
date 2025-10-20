@@ -39,12 +39,12 @@ The system uses a three-tier configuration model:
 
 ### Storage Strategy
 
-- **Redis Key Structure**: `display:config:{id}` for each display configuration
-- **List of Displays**: `display:config:list` (set of all display IDs)
+- **Redis Key Structure**: `clock-display-config:{id}` for each display configuration
+- **List of Displays**: `clock-display-config:list` (set of all display IDs)
 - **Metadata Storage**: Store complete JSON object for each display
 - **Cache Strategy**: Load all configs on app start, update on change
 - **Metadata**: Each config includes `lastModifiedAt` (timestamp) and `lastModifiedBy` fields
-- **Edit Locks**: `display:config:lock:{id}` stores temporary edit session info
+- **Edit Locks**: `clock-display-config:lock:{id}` stores temporary edit session info
 
 ### Concurrent Editing Strategy
 
@@ -82,7 +82,7 @@ To support multiple users editing configurations simultaneously, we implement a 
 
 **Redis Keys:**
 
-- `display:config:lock:{id}` → `{ sessionId, userName, timestamp, expires }`
+- `clock-display-config:lock:{id}` → `{ sessionId, userName, timestamp, expires }`
 - Metadata in config → `{ ...config, lastModifiedAt: timestamp, lastModifiedBy: sessionId }`
 
 #### Long-running Session Hardening (20+ hours)
@@ -192,8 +192,8 @@ export function useDisplayConfigs() {
   const { showToast } = useToaster();
 
   // Redis key constants
-  const DISPLAY_LIST_KEY = "display:config:list";
-  const getDisplayKey = (id: string) => `display:config:${id}`;
+  const DISPLAY_LIST_KEY = "clock-display-config:list";
+  const getDisplayKey = (id: string) => `clock-display-config:${id}`;
 
   /**
    * Load all display configs from Redis
@@ -714,7 +714,7 @@ export function useEditLock() {
    * Redis key for a config lock
    */
   function getLockKey(configId: string): string {
-    return `display:config:lock:${configId}`;
+    return `clock-display-config:lock:${configId}`;
   }
 
   /**
@@ -2204,7 +2204,7 @@ Create a utility to seed the database with sample configurations for first-time 
   - Added `RedisLoaderOptions` interface with `addVersion`, `lastModifiedBy`, `keyPattern`, `overwriteIfPresent`.
   - `loadAllRedisKeys` and `loadRedisKey` now accept optional `options` parameter.
   - `storeInRedis` applies `injectVersionMetadata` when `addVersion=true`, `type="string"`, and key matches pattern.
-  - Defaults: `keyPattern=/^display:config:/`, `lastModifiedBy="seed:init"`, `overwriteIfPresent=true`.
+  - Defaults: `keyPattern=/^clock-display-config:/`, `lastModifiedBy="seed:init"`, `overwriteIfPresent=true`.
   - This keeps version fields out of JSON files while ensuring stored values include `lastModifiedAt`/`lastModifiedBy` for conflict detection.
 - **Deviation from plan**: Plan suggested in-app seeding only; we enhanced redis-loader for broader use (can seed from files at server start with version metadata).
 
@@ -2370,7 +2370,7 @@ redis-keys/
 
 **Rules**:
 
-- Redis key `display:config:foo` → sanitized to `display.config.foo`
+- Redis key `clock-display-config:foo` → sanitized to `display.config.foo`
 - Colons (`:`) replaced with dots (`.`)
 - Variant appended as suffix before `.json`
 - Default variant: `"default"`
@@ -2434,7 +2434,7 @@ export function generateBackupVariant(): string {
    - **Why**: Conflict resolution UI shows "Modified by X". Distinguishes seed vs user edits.
    - **Justification**: Helpful for debugging and audit trails.
 
-3. **`keyPattern?: RegExp`** (default: `/^display:config:/`)
+3. **`keyPattern?: RegExp`** (default: `/^clock-display-config:/`)
 
    - **Purpose**: Only inject version metadata for keys matching this pattern
    - **Why**: Granular control when loading multiple files in batch
@@ -2693,10 +2693,10 @@ private async restoreKeysFromFiles(req: Request, res: Response) {
         // Store to Redis
         await this.redis.set(key, JSON.stringify(data));
 
-        // Update display:config:list if it's a display config
-        if (key.startsWith("display:config:")) {
-          const id = key.replace("display:config:", "");
-          await this.redis.sAdd("display:config:list", id);
+        // Update clock-display-config:list if it's a display config
+        if (key.startsWith("clock-display-config:")) {
+          const id = key.replace("clock-display-config:", "");
+          await this.redis.sAdd("clock-display-config:list", id);
         }
 
         restored.push({ key, variant });
@@ -2889,20 +2889,20 @@ async function saveToFiles() {
   const variant = prompt("Enter variant name:", "default");
   if (!variant) return;
 
-  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
   await saveKeysToFiles(allKeys, variant, true);
 }
 
 async function restoreFromFiles() {
   // Optionally list variants first
-  const sampleKey = `display:config:${displayConfigs.value[0]?.id}`;
+  const sampleKey = `clock-display-config:${displayConfigs.value[0]?.id}`;
   const variants = await listVariantsForKey(sampleKey);
 
   const variantList = variants.length > 0 ? `\nAvailable: ${variants.join(", ")}` : "";
   const variant = prompt(`Restore from variant:${variantList}`, "default");
   if (!variant) return;
 
-  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
   const success = await restoreKeysFromFiles(allKeys, variant, true);
 
   if (success) {
@@ -2912,7 +2912,7 @@ async function restoreFromFiles() {
 
 async function quickSaveAsBackup() {
   const variant = generateBackupVariant(); // "backup-2024-10-16-14-30-45"
-  const allKeys = displayConfigs.value.map((c) => `display:config:${c.id}`);
+  const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
   await saveKeysToFiles(allKeys, variant, true);
 }
 ```
@@ -2952,7 +2952,7 @@ async function quickSaveAsBackup() {
 
 ```typescript
 {
-  keys: string[],              // Required: ["display:config:foo", ...]
+  keys: string[],              // Required: ["clock-display-config:foo", ...]
   variant?: string,            // Optional: "backup-2024-10-16" (default: "default")
   stripVersionFields?: boolean // Optional: true (default)
 }
@@ -2964,11 +2964,11 @@ async function quickSaveAsBackup() {
 {
   success: true,
   saved: [
-    { key: "display:config:mission-control", variant: "default" },
-    { key: "display:config:launch", variant: "default" }
+    { key: "clock-display-config:mission-control", variant: "default" },
+    { key: "clock-display-config:launch", variant: "default" }
   ],
   errors?: [  // Optional: only present if some keys failed
-    { key: "display:config:missing", error: "Key not found in Redis" }
+    { key: "clock-display-config:missing", error: "Key not found in Redis" }
   ]
 }
 ```
@@ -2983,7 +2983,7 @@ async function quickSaveAsBackup() {
 
 ```typescript
 {
-  keys: string[],                    // Required: ["display:config:foo", ...]
+  keys: string[],                    // Required: ["clock-display-config:foo", ...]
   variant?: string,                  // Optional: "backup-2024-10-16" (default: "default")
   addVersionFields?: boolean,        // Optional: true (default)
   versionOptions?: {
@@ -2999,10 +2999,10 @@ async function quickSaveAsBackup() {
 {
   success: true,
   restored: [
-    { key: "display:config:mission-control", variant: "default" }
+    { key: "clock-display-config:mission-control", variant: "default" }
   ],
   errors?: [  // Optional: only present if some keys failed
-    { key: "display:config:missing", variant: "backup", error: "File not found" }
+    { key: "clock-display-config:missing", variant: "backup", error: "File not found" }
   ]
 }
 ```
@@ -3011,14 +3011,14 @@ async function quickSaveAsBackup() {
 
 **3. List Available Variants**
 
-**Endpoint**: `GET /api/save-restore/list-variants?key=display:config:mission-control`
+**Endpoint**: `GET /api/save-restore/list-variants?key=clock-display-config:mission-control`
 
 **Response**:
 
 ```typescript
 {
   success: true,
-  key: "display:config:mission-control",
+  key: "clock-display-config:mission-control",
   variants: ["default", "backup-2024-10-16-14-30-45", "launch-day"]
 }
 ```
@@ -3801,9 +3801,9 @@ To test the system with multiple "users":
 ### Redis Keys Used
 
 ```
-display:config:list                  → Set of all display IDs
-display:config:{id}                  → Full config JSON
-display:config:lock:{id}             → Lock info { sessionId, userName, expires }
+clock-display-config:list                  → Set of all display IDs
+clock-display-config:{id}                  → Full config JSON
+clock-display-config:lock:{id}             → Lock info { sessionId, userName, expires }
 ```
 
 **Note**: Locks auto-expire via Redis TTL (EX 300 = 5 minutes)

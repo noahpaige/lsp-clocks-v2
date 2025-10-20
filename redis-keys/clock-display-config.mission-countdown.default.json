@@ -1,5 +1,5 @@
 {
-  "key": "display:config:mission-countdown",
+  "key": "clock-display-config:mission-countdown",
   "type": "string",
   "data": {
     "id": "mission-countdown",

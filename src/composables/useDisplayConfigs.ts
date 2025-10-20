@@ -21,8 +21,8 @@ export function useDisplayConfigs() {
   const { sessionId } = useSessionId();
 
   // Redis key helpers
-  const DISPLAY_LIST_KEY = "display:config:list";
-  const getDisplayKey = (id: string) => `display:config:${id}`;
+  const DISPLAY_LIST_KEY = "clock-display-config:list";
+  const getDisplayKey = (id: string) => `clock-display-config:${id}`;
 
   async function loadDisplayConfigs() {
     isLoading.value = true;
