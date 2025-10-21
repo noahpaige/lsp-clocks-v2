@@ -1,0 +1,40 @@
+{
+  "key": "clock-display-config:foo",
+  "type": "string",
+  "data": {
+    "id": "foo",
+    "name": "Foo",
+    "description": "Foof",
+    "containerClasses": "flex flex-col w-full gap-8 justify-center items-center",
+    "rows": [
+      {
+        "clocks": [
+          {
+            "size": "2xl",
+            "format": "HHMMSS",
+            "timeType": "timespan",
+            "labelLeft": "T"
+          }
+        ],
+        "gap": 8,
+        "justify": "center",
+        "align": "center",
+        "rowClasses": ""
+      },
+      {
+        "clocks": [
+          {
+            "size": "2xl",
+            "format": "HHMMSS",
+            "timeType": "timespan",
+            "labelLeft": "L"
+          }
+        ],
+        "gap": 8,
+        "justify": "center",
+        "align": "center",
+        "rowClasses": ""
+      }
+    ]
+  }
+}
