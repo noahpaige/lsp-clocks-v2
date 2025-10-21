@@ -89,6 +89,11 @@ const isActive = (path: string) => {
   return route.path === path;
 };
 
+// Check if a section contains the active route
+const isSectionActive = (section: { label: string; items: Array<{ path: string }> }) => {
+  return section.items.some((item) => isActive(item.path));
+};
+
 // Clear search query
 const clearSearch = () => {
   searchQuery.value = "";
@@ -116,10 +121,15 @@ const clearSearch = () => {
     </SidebarHeader>
     <SidebarContent>
       <SidebarGroup v-for="section in filteredSections" :key="section.label" class="px-2 py-0">
-        <Collapsible :default-open="false" class="group">
+        <Collapsible :default-open="isSectionActive(section)" class="group">
           <CollapsibleTrigger as-child>
             <SidebarGroupLabel
-              class="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-2 flex items-center justify-between text-md font-normal text-sidebar-foreground"
+              :class="[
+                'cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-2 flex items-center justify-between text-md font-normal',
+                isSectionActive(section)
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                  : 'text-sidebar-foreground',
+              ]"
             >
               <span>{{ section.label }}</span>
               <ChevronDown class="h-4 w-4 transition-transform duration-200 group-data-[state=closed]:hidden" />
