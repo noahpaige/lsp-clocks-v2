@@ -5,10 +5,21 @@ import { useDisplayConfigs } from "@/composables/useDisplayConfigs";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Plus, Search, Edit, Copy, Trash2, Eye, Save, Upload } from "lucide-vue-next";
 import DisplayPreview from "./DisplayPreview.vue";
 import LockWidget from "@/components/shared/LockWidget.vue";
@@ -17,11 +28,32 @@ import { useRedisFileSync } from "@/composables/useRedisFileSync";
 const router = useRouter();
 const { displayConfigs, isLoading, loadDisplayConfigs, deleteDisplayConfig, duplicateDisplayConfig } =
   useDisplayConfigs();
-const { isSaving, isRestoring, saveKeysToFiles, restoreKeysFromFiles, listVariantsForKey } = useRedisFileSync();
+const {
+  isSaving,
+  isRestoring,
+  saveKeysToFiles,
+  restoreKeysFromFiles,
+  listVariantsForKey,
+  listKeysForVariant,
+  listAllVariants,
+} = useRedisFileSync();
 
 const searchQuery = ref("");
 const showPreview = ref(false);
 const previewConfigId = ref<string | null>(null);
+
+// Dialog state
+const showVariantDialog = ref(false);
+const dialogMode = ref<"save" | "restore">("save");
+const variantName = ref("default");
+const availableVariants = ref<string[]>([]);
+const showCustomInput = ref(false);
+const customVariantName = ref("");
+
+// Delete confirmation dialog state
+const showDeleteDialog = ref(false);
+const deleteConfigId = ref<string | null>(null);
+const deleteConfigName = ref<string>("");
 
 const filteredConfigs = computed(() => {
   if (!searchQuery.value) return displayConfigs.value;
@@ -32,6 +64,13 @@ const filteredConfigs = computed(() => {
       (c.description || "").toLowerCase().includes(q) ||
       (c.id || "").toLowerCase().includes(q)
   );
+});
+
+const finalVariantName = computed(() => {
+  if (showCustomInput.value) {
+    return customVariantName.value;
+  }
+  return variantName.value;
 });
 
 onMounted(() => {
@@ -50,10 +89,19 @@ async function duplicateConfig(id: string) {
   await duplicateDisplayConfig(id);
 }
 
-async function deleteConfig(id: string, name: string) {
-  if (confirm(`Are you sure you want to delete "${name}"?`)) {
-    await deleteDisplayConfig(id);
-  }
+function openDeleteDialog(id: string, name: string) {
+  deleteConfigId.value = id;
+  deleteConfigName.value = name;
+  showDeleteDialog.value = true;
+}
+
+async function confirmDelete() {
+  if (!deleteConfigId.value) return;
+
+  await deleteDisplayConfig(deleteConfigId.value);
+  showDeleteDialog.value = false;
+  deleteConfigId.value = null;
+  deleteConfigName.value = "";
 }
 
 function previewConfig(id: string) {
@@ -65,31 +113,58 @@ function getTotalClocks(config: any) {
   return config.rows?.reduce((total: number, row: any) => total + (row.clocks?.length || 0), 0) ?? 0;
 }
 
-async function saveToFiles() {
-  const variant = prompt("Enter variant name:", "default");
-  if (!variant) return;
+async function openSaveDialog() {
+  dialogMode.value = "save";
+  variantName.value = "default";
+  showCustomInput.value = false;
+  customVariantName.value = "";
 
-  const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
-  await saveKeysToFiles(allKeys, variant, true);
+  // Get variants only for display configurations
+  availableVariants.value = await listAllVariants(/^clock-display-config\..*\.json$/);
+
+  showVariantDialog.value = true;
 }
 
-async function restoreFromFiles() {
-  // Optionally list variants first
-  const sampleKey = displayConfigs.value[0]
-    ? `clock-display-config:${displayConfigs.value[0].id}`
-    : "clock-display-config:default";
-  const variants = await listVariantsForKey(sampleKey);
+async function openRestoreDialog() {
+  dialogMode.value = "restore";
+  variantName.value = "default";
+  showCustomInput.value = false;
+  customVariantName.value = "";
 
-  const variantList = variants.length > 0 ? `\nAvailable: ${variants.join(", ")}` : "";
-  const variant = prompt(`Restore from variant:${variantList}`, "default");
+  // Get variants only for display configurations
+  availableVariants.value = await listAllVariants(/^clock-display-config\..*\.json$/);
+
+  showVariantDialog.value = true;
+}
+
+function handleVariantChange(value: string) {
+  if (value === "__custom__") {
+    showCustomInput.value = true;
+    customVariantName.value = "";
+  } else {
+    showCustomInput.value = false;
+    variantName.value = value;
+  }
+}
+
+async function confirmVariantAction() {
+  const variant = finalVariantName.value;
   if (!variant) return;
 
-  const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
-  const success = await restoreKeysFromFiles(allKeys, variant, true);
-
-  if (success) {
-    await loadDisplayConfigs();
+  if (dialogMode.value === "save") {
+    // For save: use current display configs
+    const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
+    await saveKeysToFiles(allKeys, variant, true);
+  } else {
+    // For restore: get ALL keys that exist for this variant
+    const allKeys = await listKeysForVariant(variant);
+    const success = await restoreKeysFromFiles(allKeys, variant, true);
+    if (success) {
+      await loadDisplayConfigs();
+    }
   }
+
+  showVariantDialog.value = false;
 }
 </script>
 
@@ -108,7 +183,7 @@ async function restoreFromFiles() {
         <ButtonGroup>
           <Tooltip>
             <TooltipTrigger as-child>
-              <Button @click="saveToFiles" variant="outline" :disabled="isSaving">
+              <Button @click="openSaveDialog" variant="outline" :disabled="isSaving">
                 <Save class="mr-2 h-4 w-4" />
                 {{ isSaving ? "Saving..." : "Save" }}
               </Button>
@@ -119,7 +194,7 @@ async function restoreFromFiles() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger as-child>
-              <Button @click="restoreFromFiles" variant="outline" :disabled="isRestoring">
+              <Button @click="openRestoreDialog" variant="outline" :disabled="isRestoring">
                 <Upload class="mr-2 h-4 w-4" />
                 {{ isRestoring ? "Restoring..." : "Restore" }}
               </Button>
@@ -176,7 +251,7 @@ async function restoreFromFiles() {
                   <Button @click="duplicateConfig(config.id)" variant="ghost" size="icon" title="Duplicate">
                     <Copy class="h-4 w-4" />
                   </Button>
-                  <Button @click="deleteConfig(config.id, config.name)" variant="ghost" size="icon" title="Delete">
+                  <Button @click="openDeleteDialog(config.id, config.name)" variant="ghost" size="icon" title="Delete">
                     <Trash2 class="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
@@ -187,5 +262,90 @@ async function restoreFromFiles() {
       </CardContent>
     </Card>
     <DisplayPreview v-if="showPreview && previewConfigId" :config-id="previewConfigId" @close="showPreview = false" />
+
+    <!-- Variant Dialog -->
+    <Dialog v-model:open="showVariantDialog">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{{ dialogMode === "save" ? "Save to File" : "Restore from File" }}</DialogTitle>
+          <DialogDescription>
+            {{
+              dialogMode === "save"
+                ? "Enter a variant name to save the display configurations."
+                : "Enter the variant name to restore display configurations from."
+            }}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-4 pt-4 pb-6 max-w-60">
+          <div class="space-y-2">
+            <Select
+              :model-value="showCustomInput ? '__custom__' : variantName"
+              @update:model-value="handleVariantChange"
+              class="max-w-48"
+            >
+              <SelectTrigger id="variant-select">
+                <SelectValue placeholder="Default Variant" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="variant in availableVariants" :key="variant" :value="variant">
+                  {{ variant }}
+                </SelectItem>
+                <SelectItem v-if="dialogMode === 'save'" value="__custom__"> + New variant... </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div v-if="showCustomInput" class="space-y-2">
+            <Label for="custom-variant-name">Custom Variant Name</Label>
+            <Input
+              id="custom-variant-name"
+              v-model="customVariantName"
+              placeholder="Enter new variant name"
+              @keydown.enter="confirmVariantAction"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" @click="showVariantDialog = false">Cancel</Button>
+          <Button @click="confirmVariantAction" :disabled="!finalVariantName">
+            {{ dialogMode === "save" ? "Save" : "Restore" }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- Delete Confirmation Dialog -->
+    <Dialog v-model:open="showDeleteDialog">
+      <DialogContent class="w-1/2 max-w-2xl min-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Delete Display Configuration</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete this display configuration? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Card class="p-0 my-12">
+          <CardContent class="py-1 px-4">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex flex-col items-center gap-2 h-20 mt-3 shrink-0">
+                <span class="font-semibold text-lg">{{ deleteConfigName }}</span>
+                <span class="text-sm text-muted-foreground">{{ deleteConfigId }}</span>
+              </div>
+              <Separator class="h-full border-l w-1" />
+              <p class="text-sm text-muted-foreground">
+                {{ displayConfigs.find((c) => c.id === deleteConfigId)?.description }}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <DialogFooter class="gap-2">
+          <Button variant="outline" @click="showDeleteDialog = false">Cancel</Button>
+          <Button variant="destructive" @click="confirmDelete">Delete</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

@@ -15,7 +15,7 @@ export function useToaster() {
   onMounted(() => {
     // Add this subscriber to the active set
     activeSubscribers.add(subscriber);
-    
+
     // Only set up the listener if it's not already added
     if (!isToastListenerAdded) {
       isToastListenerAdded = true;
@@ -53,7 +53,7 @@ export function useToaster() {
   onUnmounted(() => {
     // Remove this subscriber from the active set
     activeSubscribers.delete(subscriber);
-    
+
     // Only remove the listener if this was the component that set it up
     // and there are no other active subscribers
     if (activeSubscribers.size === 0 && isToastListenerAdded) {

@@ -6,6 +6,9 @@ import { Server as HTTPServer } from "http";
 import {
   keyToFileName,
   listVariantsForKey,
+  listKeysForVariant,
+  deleteKeyFile,
+  listAllVariants,
   stripVersionMetadata,
   addVersionMetadata,
   safeReadJsonFile,
@@ -26,6 +29,7 @@ class RedisAPI {
     "SET",
     "GET",
     "DEL",
+    "KEYS",
     "HSET",
     "HGET",
     "HGETALL",
@@ -93,6 +97,14 @@ class RedisAPI {
 
     this.app.get("/api/save-restore/list-variants", async (req, res) => {
       await this.listVariants(req, res);
+    });
+
+    this.app.get("/api/save-restore/list-keys", async (req, res) => {
+      await this.listKeys(req, res);
+    });
+
+    this.app.get("/api/save-restore/list-all-variants", async (req, res) => {
+      await this.listAllVariants(req, res);
     });
   }
 
@@ -224,7 +236,7 @@ class RedisAPI {
 
   private async saveKeysToFiles(req: Request, res: Response) {
     try {
-      const { keys, variant = "default", stripVersionFields = true } = req.body;
+      const { keys, variant = "default", stripVersionFields = true, deleteOrphans = true } = req.body;
 
       if (!Array.isArray(keys) || keys.length === 0) {
         return res.status(400).json({ error: "keys array is required" });
@@ -236,7 +248,9 @@ class RedisAPI {
 
       const saved: { key: string; variant: string }[] = [];
       const errors: { key: string; error: string }[] = [];
+      const deleted: string[] = [];
 
+      // Save the new keys
       for (const key of keys) {
         try {
           const raw = await this.redis.get(key);
@@ -260,7 +274,32 @@ class RedisAPI {
         }
       }
 
-      res.json({ success: true, saved, errors: errors.length > 0 ? errors : undefined });
+      // Delete orphaned files if requested
+      if (deleteOrphans) {
+        try {
+          const existingKeys = await listKeysForVariant(variant);
+          const keysToDelete = existingKeys.filter((k) => !keys.includes(k));
+
+          for (const key of keysToDelete) {
+            try {
+              await deleteKeyFile(key, variant);
+              deleted.push(key);
+            } catch (error: any) {
+              console.warn(`Failed to delete orphaned file for key ${key}:`, error.message);
+            }
+          }
+        } catch (error: any) {
+          console.error("Error deleting orphaned files:", error);
+          // Don't fail the whole operation if cleanup fails
+        }
+      }
+
+      res.json({
+        success: true,
+        saved,
+        deleted: deleted.length > 0 ? deleted : undefined,
+        errors: errors.length > 0 ? errors : undefined,
+      });
     } catch (error: any) {
       console.error("Error in saveKeysToFiles:", error);
       res.status(500).json({ error: error.message });
@@ -269,7 +308,13 @@ class RedisAPI {
 
   private async restoreKeysFromFiles(req: Request, res: Response) {
     try {
-      const { keys, variant = "default", addVersionFields = true, versionOptions = {} } = req.body;
+      const {
+        keys,
+        variant = "default",
+        addVersionFields = true,
+        versionOptions = {},
+        deleteExisting = true,
+      } = req.body;
 
       if (!Array.isArray(keys) || keys.length === 0) {
         return res.status(400).json({ error: "keys array is required" });
@@ -281,7 +326,28 @@ class RedisAPI {
 
       const restored: { key: string; variant: string }[] = [];
       const errors: { key: string; variant: string; error: string }[] = [];
+      const deleted: string[] = [];
 
+      // If deleteExisting is true, delete all existing display config keys first
+      if (deleteExisting) {
+        try {
+          // Get all keys that match the display config pattern
+          const allKeys = await this.redis.keys("clock-display-config:*");
+
+          for (const existingKey of allKeys) {
+            // Don't delete keys that are being restored (they'll be overwritten anyway)
+            if (!keys.includes(existingKey)) {
+              await this.redis.del(existingKey);
+              deleted.push(existingKey);
+            }
+          }
+        } catch (error: any) {
+          console.warn("Error deleting existing keys:", error.message);
+          // Don't fail the whole operation if cleanup fails
+        }
+      }
+
+      // Restore the keys from the variant
       for (const key of keys) {
         try {
           const fileName = keyToFileName(key, variant);
@@ -306,7 +372,12 @@ class RedisAPI {
         }
       }
 
-      res.json({ success: true, restored, errors: errors.length > 0 ? errors : undefined });
+      res.json({
+        success: true,
+        restored,
+        deleted: deleted.length > 0 ? deleted : undefined,
+        errors: errors.length > 0 ? errors : undefined,
+      });
     } catch (error: any) {
       console.error("Error in restoreKeysFromFiles:", error);
       res.status(500).json({ error: error.message });
@@ -325,6 +396,48 @@ class RedisAPI {
       res.json({ success: true, key, variants });
     } catch (error: any) {
       console.error("Error listing variants:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  private async listKeys(req: Request, res: Response) {
+    try {
+      const { variant } = req.query;
+
+      if (!variant || typeof variant !== "string") {
+        return res.status(400).json({ error: "variant query parameter is required" });
+      }
+
+      if (!isValidVariant(variant)) {
+        return res.status(400).json({ error: "Invalid variant name" });
+      }
+
+      const keys = await listKeysForVariant(variant);
+      res.json({ success: true, variant, keys });
+    } catch (error: any) {
+      console.error("Error listing keys:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  private async listAllVariants(req: Request, res: Response) {
+    try {
+      const { pattern } = req.query;
+
+      // Convert pattern string to RegExp if provided
+      let keyPattern: RegExp | undefined;
+      if (pattern && typeof pattern === "string") {
+        try {
+          keyPattern = new RegExp(pattern);
+        } catch (error) {
+          return res.status(400).json({ error: "Invalid regex pattern" });
+        }
+      }
+
+      const variants = await listAllVariants(keyPattern);
+      res.json({ success: true, variants, pattern: pattern || null });
+    } catch (error: any) {
+      console.error("Error listing all variants:", error);
       res.status(500).json({ error: error.message });
     }
   }

@@ -37,6 +37,56 @@ export async function listVariantsForKey(redisKey: string): Promise<string[]> {
   }
 }
 
+export async function listKeysForVariant(variant: string): Promise<string[]> {
+  try {
+    const safeVariant = sanitizeVariant(variant);
+    const suffix = `.${safeVariant}.json`;
+    console.log(suffix);
+    const files = await fs.readdir(REDIS_KEYS_DIR);
+
+    const keys = files
+      .filter((f) => f.endsWith(suffix))
+      .map((f) => {
+        const { key } = fileNameToKey(f);
+        return key;
+      })
+      .sort();
+
+    return keys;
+  } catch (error) {
+    console.error(`Error listing keys for variant ${variant}:`, error);
+    return [];
+  }
+}
+
+export async function deleteKeyFile(redisKey: string, variant: string): Promise<void> {
+  const fileName = keyToFileName(redisKey, variant);
+  const filePath = path.join(REDIS_KEYS_DIR, fileName);
+  await fs.unlink(filePath);
+}
+
+export async function listAllVariants(keyPattern?: RegExp): Promise<string[]> {
+  try {
+    const files = await fs.readdir(REDIS_KEYS_DIR);
+    const variants = new Set<string>();
+
+    files
+      .filter((f) => f.endsWith(".json"))
+      .forEach((f) => {
+        // If no pattern provided, include all files (backward compatibility)
+        if (!keyPattern || keyPattern.test(f)) {
+          const { variant } = fileNameToKey(f);
+          variants.add(variant);
+        }
+      });
+
+    return Array.from(variants).sort();
+  } catch (error) {
+    console.error("Error listing all variants:", error);
+    return [];
+  }
+}
+
 export function stripVersionMetadata(data: any): any {
   if (typeof data === "object" && data !== null && !Array.isArray(data)) {
     const { lastModifiedAt, lastModifiedBy, ...clean } = data;
