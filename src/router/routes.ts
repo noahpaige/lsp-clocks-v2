@@ -1,5 +1,26 @@
 // Only eager load the absolute critical path
 import HomePage from "@/components/Pages/HomePage/HomePage.vue";
+import { Settings, Clock, Palette, Bell } from "lucide-vue-next";
+import type { Component } from "vue";
+
+// Define route meta interface for type safety
+export interface RouteMeta {
+  showTopNav?: boolean;
+  title?: string;
+  category?: string;
+  description?: string;
+  icon?: Component;
+  keywords?: string[];
+  showInSidebar?: boolean;
+}
+
+// Category labels for organizing sidebar
+export const CATEGORY_LABELS: Record<string, string> = {
+  general: "General",
+  displays: "Displays",
+  appearance: "Appearance",
+  notifications: "Notifications",
+};
 
 const routes = [
   {
@@ -57,6 +78,9 @@ const routes = [
           title: "Application Settings",
           category: "general",
           description: "Configure general application preferences and settings",
+          icon: Settings,
+          keywords: ["app", "title", "general", "redis", "settings"],
+          showInSidebar: true,
         },
       },
       {
@@ -68,6 +92,9 @@ const routes = [
           title: "Clock Displays",
           category: "displays",
           description: "Manage clock display layouts",
+          icon: Clock,
+          keywords: ["display", "clock", "config", "layout", "configurations"],
+          showInSidebar: true,
         },
       },
       {
@@ -80,6 +107,7 @@ const routes = [
           title: "Create Display Config",
           category: "displays",
           description: "Create a new clock display layout configuration",
+          showInSidebar: false, // Don't show in sidebar (accessed via button from clock-displays)
         },
       },
       {
@@ -92,6 +120,7 @@ const routes = [
           title: "Edit Display Config",
           category: "displays",
           description: "Modify an existing clock display layout",
+          showInSidebar: false, // Don't show in sidebar (accessed via button from clock-displays)
         },
       },
       {
@@ -100,9 +129,12 @@ const routes = [
         component: () => import("@/components/Pages/ConfigPage/views/appearance/theme/ThemePage.vue"),
         meta: {
           showTopNav: true,
-          title: "Theme Settings",
+          title: "Theme",
           category: "appearance",
           description: "Customize theme colors and appearance",
+          icon: Palette,
+          keywords: ["theme", "dark", "light", "colors", "appearance"],
+          showInSidebar: true,
         },
       },
       {
@@ -115,6 +147,9 @@ const routes = [
           title: "Notification Settings",
           category: "notifications",
           description: "Configure notification preferences and alerts",
+          icon: Bell,
+          keywords: ["notifications", "toast", "alerts", "messages"],
+          showInSidebar: true,
         },
       },
     ],

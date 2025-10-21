@@ -1,7 +1,7 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from "vue";
-import { useRoute } from "vue-router";
-import { Settings, Monitor, Palette, Bell, ChevronDown, ChevronRight, X } from "lucide-vue-next";
+import { useRoute, useRouter } from "vue-router";
+import { ChevronDown, ChevronRight, X } from "lucide-vue-next";
 import {
   Sidebar,
   SidebarContent,
@@ -17,65 +17,64 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { CATEGORY_LABELS, type RouteMeta } from "@/router/routes";
 
 const route = useRoute();
+const router = useRouter();
 const searchQuery = ref("");
 
-// Sidebar menu structure
-const sidebarSections = [
-  {
-    label: "General",
-    items: [
-      {
-        title: "Application Settings",
-        path: "/config/application-settings",
-        icon: Settings,
-        keywords: ["app", "title", "general", "redis", "settings"],
-      },
-    ],
-  },
-  {
-    label: "Displays",
-    items: [
-      {
-        title: "Clock Displays",
-        path: "/config/clock-displays",
-        icon: Monitor,
-        keywords: ["display", "clock", "config", "layout", "configurations"],
-      },
-    ],
-  },
-  {
-    label: "Appearance",
-    items: [
-      {
-        title: "Theme",
-        path: "/config/theme",
-        icon: Palette,
-        keywords: ["theme", "dark", "light", "colors", "appearance"],
-      },
-    ],
-  },
-  {
-    label: "Notifications",
-    items: [
-      {
-        title: "Notification Settings",
-        path: "/config/notifications",
-        icon: Bell,
-        keywords: ["notifications", "toast", "alerts", "messages"],
-      },
-    ],
-  },
-];
+// Build sidebar menu from router config
+const sidebarSections = computed(() => {
+  // Find the /config route
+  const configRoute = router.options.routes.find((r) => r.path === "/config");
+  if (!configRoute?.children) return [];
+
+  // Group routes by category
+  const categoryMap = new Map<
+    string,
+    Array<{
+      title: string;
+      path: string;
+      icon: any;
+      keywords: string[];
+    }>
+  >();
+
+  configRoute.children.forEach((child) => {
+    const meta = child.meta as RouteMeta;
+
+    // Only include routes that should be shown in sidebar
+    if (!meta?.showInSidebar) return;
+
+    const category = meta.category || "other";
+    const fullPath = `/config/${child.path}`;
+
+    if (!categoryMap.has(category)) {
+      categoryMap.set(category, []);
+    }
+
+    categoryMap.get(category)!.push({
+      title: meta.title || (child.name as string) || child.path,
+      path: fullPath,
+      icon: meta.icon,
+      keywords: meta.keywords || [],
+    });
+  });
+
+  // Convert map to array of sections
+  return Array.from(categoryMap.entries()).map(([category, items]) => ({
+    label: CATEGORY_LABELS[category] || category,
+    items,
+  }));
+});
 
 // Filter sections based on search query
 const filteredSections = computed(() => {
-  if (!searchQuery.value) return sidebarSections;
+  if (!searchQuery.value) return sidebarSections.value;
 
   const query = searchQuery.value.toLowerCase();
 
-  return sidebarSections
+  return sidebarSections.value
     .map((section) => ({
       ...section,
       items: section.items.filter(
@@ -86,7 +85,7 @@ const filteredSections = computed(() => {
 });
 
 // Check if a route is active
-const isActive = (path) => {
+const isActive = (path: string) => {
   return route.path === path;
 };
 
