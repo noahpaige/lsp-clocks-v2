@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { Lock, LockOpen } from "lucide-vue-next";
+import { Lock, LockOpen, Handshake, Axe } from "lucide-vue-next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -140,11 +140,20 @@ onMounted(async () => {
       <DropdownMenuSeparator v-if="lockStatus" />
 
       <!-- Actions -->
-      <DropdownMenuItem @click="onRequestLock"> Request Lock </DropdownMenuItem>
+      <DropdownMenuItem class="flex items-center gap-2 cursor-pointer" @click="onRequestLock">
+        <Handshake class="h-4 w-4" /> Request Lock
+      </DropdownMenuItem>
 
-      <DropdownMenuItem @click="onForceLock"> Force Lock </DropdownMenuItem>
+      <DropdownMenuItem class="flex items-center gap-2 cursor-pointer" @click="onForceLock">
+        <Axe class="h-4 w-4" /> Force Lock
+      </DropdownMenuItem>
 
-      <DropdownMenuItem v-if="isOwnLock" @click="onReleaseLock" class="text-destructive">
+      <DropdownMenuItem
+        v-if="isOwnLock"
+        @click="onReleaseLock"
+        class="flex items-center gap-2 cursor-pointer text-destructive"
+      >
+        <LockOpen class="h-4 w-4" />
         Release Lock
       </DropdownMenuItem>
     </DropdownMenuContent>
