@@ -137,7 +137,7 @@ async function save() {
     }
   } else {
     const success = await createDisplayConfig(displayConfig.value);
-    if (success) router.push("/config/display-configs");
+    if (success) router.push("/config/clock-displays");
   }
   isSaving.value = false;
 }
@@ -165,7 +165,7 @@ async function handleCancelConflict() {
     await releaseLock(getDisplayConfigKey(configId.value));
   }
   showConflictModal.value = false;
-  router.push("/config/display-configs");
+  router.push("/config/clock-displays");
 }
 </script>
 

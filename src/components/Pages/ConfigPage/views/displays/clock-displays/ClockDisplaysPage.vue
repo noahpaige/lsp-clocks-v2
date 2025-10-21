@@ -26,6 +26,7 @@ import DisplayPreview from "./ClockDisplayPreview.vue";
 import LockWidget from "@/components/shared/LockWidget.vue";
 import VariantNameInput from "@/components/shared/VariantNameInput.vue";
 import { useRedisFileSync } from "@/composables/useRedisFileSync";
+import { useToaster } from "@/composables/useToaster";
 import { REDIS_CONFIG } from "@/config/constants";
 import { getDisplayConfigKey } from "@/utils/redisKeyUtils";
 
@@ -41,6 +42,7 @@ const {
   listKeysForVariant,
   listAllVariants,
 } = useRedisFileSync();
+const { emitToast } = useToaster();
 
 const searchQuery = ref("");
 const showPreview = ref(false);
@@ -76,6 +78,16 @@ const finalVariantName = computed(() => {
     return customVariantName.value;
   }
   return variantName.value;
+});
+
+// Check if default variant exists
+const hasDefaultVariant = computed(() => {
+  return availableVariants.value.includes("default");
+});
+
+// Check if any variants exist
+const hasAnyVariants = computed(() => {
+  return availableVariants.value.length > 0;
 });
 
 onMounted(() => {
@@ -120,24 +132,49 @@ function getTotalClocks(config: any) {
 
 async function openSaveDialog() {
   dialogMode.value = "save";
-  variantName.value = "default";
-  showCustomInput.value = false;
-  customVariantName.value = "";
 
   // Get variants only for display configurations
   availableVariants.value = await listAllVariants(REDIS_CONFIG.KEYS.DISPLAY_CONFIG.FILE_PATTERN);
+
+  // If no variants exist, start with custom input
+  if (availableVariants.value.length === 0) {
+    showCustomInput.value = true;
+    customVariantName.value = "";
+    variantName.value = "";
+  } else {
+    variantName.value = "default";
+    showCustomInput.value = false;
+    customVariantName.value = "";
+  }
 
   showVariantDialog.value = true;
 }
 
 async function openRestoreDialog() {
   dialogMode.value = "restore";
-  variantName.value = "default";
-  showCustomInput.value = false;
-  customVariantName.value = "";
 
   // Get variants only for display configurations
   availableVariants.value = await listAllVariants(REDIS_CONFIG.KEYS.DISPLAY_CONFIG.FILE_PATTERN);
+
+  // If no variants exist, disable restore functionality
+  if (availableVariants.value.length === 0) {
+    emitToast({
+      title: "No saved variants found. Save a configuration first.",
+      type: "warning",
+      deliverTo: "all",
+    });
+    return;
+  }
+
+  // If default variant exists, use it; otherwise use first available variant
+  if (availableVariants.value.includes("default")) {
+    variantName.value = "default";
+  } else {
+    variantName.value = availableVariants.value[0];
+  }
+
+  showCustomInput.value = false;
+  customVariantName.value = "";
 
   showVariantDialog.value = true;
 }
@@ -299,20 +336,24 @@ async function confirmVariantAction() {
             {{
               dialogMode === "save"
                 ? "Enter a variant name to save the display configurations."
-                : "Enter the variant name to restore display configurations from."
+                : hasAnyVariants
+                ? "Enter the variant name to restore display configurations from."
+                : "No saved variants found. Save a configuration first to enable restore functionality."
             }}
           </DialogDescription>
         </DialogHeader>
 
         <div class="space-y-4 pt-4 pb-6 max-w-60">
           <div class="space-y-2">
+            <!-- Show dropdown only if variants exist or we're in save mode -->
             <Select
+              v-if="hasAnyVariants || dialogMode === 'save'"
               :model-value="showCustomInput ? '__custom__' : variantName"
               @update:model-value="handleVariantChange"
               class="max-w-48"
             >
               <SelectTrigger id="variant-select">
-                <SelectValue placeholder="Default Variant" />
+                <SelectValue :placeholder="hasDefaultVariant ? 'Default Variant' : 'Select variant...'" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem v-for="variant in availableVariants" :key="variant" :value="variant">
@@ -321,6 +362,14 @@ async function confirmVariantAction() {
                 <SelectItem v-if="dialogMode === 'save'" value="__custom__"> + New variant... </SelectItem>
               </SelectContent>
             </Select>
+
+            <!-- Show message when no variants exist for restore -->
+            <div
+              v-else-if="dialogMode === 'restore'"
+              class="text-sm text-muted-foreground p-3 border rounded-md bg-muted/50"
+            >
+              No saved variants found. Save a configuration first to enable restore functionality.
+            </div>
           </div>
 
           <div v-if="showCustomInput" class="space-y-2">
@@ -338,6 +387,7 @@ async function confirmVariantAction() {
         <DialogFooter>
           <Button variant="outline" @click="showVariantDialog = false">Cancel</Button>
           <Button
+            v-if="dialogMode === 'save' || hasAnyVariants"
             @click="confirmVariantAction"
             :disabled="!finalVariantName || (showCustomInput && !variantInputRef?.isValid)"
           >
