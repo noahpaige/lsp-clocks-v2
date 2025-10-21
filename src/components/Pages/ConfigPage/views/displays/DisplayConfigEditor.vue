@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Save, X, AlertCircle } from "lucide-vue-next";
+import { Plus, Save, X, AlertCircle, Loader2 } from "lucide-vue-next";
 import RowEditor from "./RowEditor.vue";
 
 const route = useRoute();
@@ -35,6 +35,38 @@ const lockInfo = ref<any | null>(null);
 const originalLastModifiedAt = ref<number>(0);
 const showConflictModal = ref(false);
 const conflictConfig = ref<any | null>(null);
+
+// Validation state
+const errors = ref<Record<string, string | null>>({
+  id: null,
+  name: null,
+});
+
+// Validate individual fields
+const validateField = (field: "id" | "name") => {
+  if (field === "id") {
+    if (!displayConfig.value.id.trim()) {
+      errors.value.id = "Display ID is required";
+    } else if (!/^[a-zA-Z0-9-_]+$/.test(displayConfig.value.id)) {
+      errors.value.id = "ID must contain only letters, numbers, hyphens, or underscores";
+    } else {
+      errors.value.id = null;
+    }
+  }
+
+  if (field === "name") {
+    if (!displayConfig.value.name.trim()) {
+      errors.value.name = "Display name is required";
+    } else {
+      errors.value.name = null;
+    }
+  }
+};
+
+// Check if form is valid
+const canSave = computed(() => {
+  return !errors.value.id && !errors.value.name && displayConfig.value.id.trim() && displayConfig.value.name.trim();
+});
 
 onMounted(async () => {
   if (isEditMode.value && configId.value) {
@@ -78,12 +110,11 @@ function removeRow(index: number) {
 }
 
 async function save() {
-  if (!displayConfig.value.id.trim()) {
-    alert("Please enter a display ID");
-    return;
-  }
-  if (!displayConfig.value.name.trim()) {
-    alert("Please enter a display name");
+  // Validate all fields before saving
+  validateField("id");
+  validateField("name");
+
+  if (!canSave.value) {
     return;
   }
 
@@ -169,8 +200,9 @@ async function handleCancelConflict() {
           <X class="mr-2 h-4 w-4" />
           Cancel
         </Button>
-        <Button @click="save" :disabled="isSaving">
-          <Save class="mr-2 h-4 w-4" />
+        <Button @click="save" :disabled="isSaving || !canSave">
+          <Loader2 v-if="isSaving" class="mr-2 h-4 w-4 animate-spin" />
+          <Save v-else class="mr-2 h-4 w-4" />
           {{ isSaving ? "Saving..." : "Save" }}
         </Button>
       </div>
@@ -184,12 +216,27 @@ async function handleCancelConflict() {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <Label>Display ID *</Label>
-            <Input v-model="displayConfig.id" placeholder="e.g., mission-control-main" :disabled="isEditMode" />
-            <p class="text-xs text-muted-foreground mt-1">Unique identifier (cannot be changed after creation)</p>
+            <Input
+              v-model="displayConfig.id"
+              placeholder="e.g., mission-control-main"
+              :disabled="isEditMode"
+              :class="{ 'border-red-500 focus-visible:ring-red-500': errors.id }"
+              @blur="validateField('id')"
+            />
+            <p v-if="errors.id" class="text-sm text-red-500 mt-1">{{ errors.id }}</p>
+            <p v-else class="text-xs text-muted-foreground mt-1">
+              Unique identifier (cannot be changed after creation)
+            </p>
           </div>
           <div>
             <Label>Display Name *</Label>
-            <Input v-model="displayConfig.name" placeholder="e.g., Mission Control Display" />
+            <Input
+              v-model="displayConfig.name"
+              placeholder="e.g., Mission Control Display"
+              :class="{ 'border-red-500 focus-visible:ring-red-500': errors.name }"
+              @blur="validateField('name')"
+            />
+            <p v-if="errors.name" class="text-sm text-red-500 mt-1">{{ errors.name }}</p>
           </div>
         </div>
         <div>

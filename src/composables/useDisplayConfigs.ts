@@ -168,14 +168,21 @@ export function useDisplayConfigs() {
   }
 
   async function deleteDisplayConfig(id: string): Promise<boolean> {
+    // Optimistic update: remove from UI immediately
+    const deletedConfig = displayConfigs.value.find((c) => c.id === id);
+    const previousConfigs = [...displayConfigs.value];
+    displayConfigs.value = displayConfigs.value.filter((c) => c.id !== id);
+
     try {
       await sendInstantCommand("DEL", getDisplayKey(id));
       await sendInstantCommand("SREM", DISPLAY_LIST_KEY, [id]);
 
-      displayConfigs.value = displayConfigs.value.filter((c) => c.id !== id);
       emitToast({ title: "Display configuration deleted", type: "success", deliverTo: "all" });
       return true;
     } catch (e) {
+      // Rollback on error
+      displayConfigs.value = previousConfigs;
+
       logError("useDisplayConfigs", "delete display configuration", e, { configId: id });
       const errorMsg = createUserErrorMessage("delete display configuration", id, e);
       emitToast({ ...errorMsg, type: "error", deliverTo: "all" });

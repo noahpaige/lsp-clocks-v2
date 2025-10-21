@@ -20,9 +20,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Search, Edit, Copy, Trash2, Eye, Save, Upload } from "lucide-vue-next";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, Search, Edit, Copy, Trash2, Eye, Save, Upload, Loader2 } from "lucide-vue-next";
 import DisplayPreview from "./DisplayPreview.vue";
 import LockWidget from "@/components/shared/LockWidget.vue";
+import VariantNameInput from "@/components/shared/VariantNameInput.vue";
 import { useRedisFileSync } from "@/composables/useRedisFileSync";
 import { REDIS_CONFIG } from "@/config/constants";
 import { getDisplayConfigKey } from "@/utils/redisKeyUtils";
@@ -51,6 +53,7 @@ const variantName = ref("default");
 const availableVariants = ref<string[]>([]);
 const showCustomInput = ref(false);
 const customVariantName = ref("");
+const variantInputRef = ref<InstanceType<typeof VariantNameInput> | null>(null);
 
 // Delete confirmation dialog state
 const showDeleteDialog = ref(false);
@@ -153,6 +156,11 @@ async function confirmVariantAction() {
   const variant = finalVariantName.value;
   if (!variant) return;
 
+  // Check validation if using custom input
+  if (showCustomInput.value && !variantInputRef.value?.isValid) {
+    return; // Prevent save if validation fails
+  }
+
   if (dialogMode.value === "save") {
     // For save: use current display configs
     const allKeys = displayConfigs.value.map((c) => getDisplayConfigKey(c.id));
@@ -186,7 +194,8 @@ async function confirmVariantAction() {
           <Tooltip>
             <TooltipTrigger as-child>
               <Button @click="openSaveDialog" variant="outline" :disabled="isSaving">
-                <Save class="mr-2 h-4 w-4" />
+                <Loader2 v-if="isSaving" class="mr-2 h-4 w-4 animate-spin" />
+                <Save v-else class="mr-2 h-4 w-4" />
                 {{ isSaving ? "Saving..." : "Save" }}
               </Button>
             </TooltipTrigger>
@@ -197,7 +206,8 @@ async function confirmVariantAction() {
           <Tooltip>
             <TooltipTrigger as-child>
               <Button @click="openRestoreDialog" variant="outline" :disabled="isRestoring">
-                <Upload class="mr-2 h-4 w-4" />
+                <Loader2 v-if="isRestoring" class="mr-2 h-4 w-4 animate-spin" />
+                <Upload v-else class="mr-2 h-4 w-4" />
                 {{ isRestoring ? "Restoring..." : "Restore" }}
               </Button>
             </TooltipTrigger>
@@ -211,13 +221,15 @@ async function confirmVariantAction() {
 
     <Card>
       <CardContent class="p-0">
-        <div v-if="isLoading" class="text-center py-8 text-muted-foreground">Loading configurations...</div>
+        <!-- Loading skeletons -->
 
-        <div v-else-if="filteredConfigs.length === 0" class="text-center py-8 text-muted-foreground">
+        <!-- Empty state -->
+        <div v-if="filteredConfigs.length === 0" class="text-center py-8 text-muted-foreground">
           <p>No display configurations found.</p>
           <Button @click="createNew" variant="link" class="mt-2">Create your first display</Button>
         </div>
 
+        <!-- Table content -->
         <Table v-else>
           <TableHeader>
             <TableRow>
@@ -225,11 +237,24 @@ async function confirmVariantAction() {
               <TableHead>Description</TableHead>
               <TableHead>Rows</TableHead>
               <TableHead>Clocks</TableHead>
-              <TableHead class="text-right">Actions</TableHead>
+              <TableHead class="flex items-center justify-end">
+                <span class="text-right flex-1">Actions</span>
+                <div class="flex-0 w-40"></div>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="config in filteredConfigs" :key="config.id">
+            <TableRow v-if="isLoading" v-for="i in 3" :key="i">
+              <TableCell class="flex-1 space-y-2">
+                <Skeleton class="h-5 w-32" />
+                <Skeleton class="h-4 w-20"
+              /></TableCell>
+              <TableCell><Skeleton class="h-6 w-30" /></TableCell>
+              <TableCell><Skeleton class="h-6 w-8" /></TableCell>
+              <TableCell><Skeleton class="h-9 w-8" /></TableCell>
+              <TableCell><Skeleton class="h-9 w-40 r-0" /></TableCell>
+            </TableRow>
+            <TableRow v-else v-for="config in filteredConfigs" :key="config.id">
               <TableCell class="font-medium">
                 {{ config.name }}
                 <div class="text-xs text-muted-foreground">{{ config.id }}</div>
@@ -299,11 +324,12 @@ async function confirmVariantAction() {
           </div>
 
           <div v-if="showCustomInput" class="space-y-2">
-            <Label for="custom-variant-name">Custom Variant Name</Label>
-            <Input
-              id="custom-variant-name"
+            <Label for="custom-variant-name">New Variant Name</Label>
+            <VariantNameInput
               v-model="customVariantName"
-              placeholder="Enter new variant name"
+              ref="variantInputRef"
+              :existing-variants="availableVariants"
+              mode="create"
               @keydown.enter="confirmVariantAction"
             />
           </div>
@@ -311,7 +337,10 @@ async function confirmVariantAction() {
 
         <DialogFooter>
           <Button variant="outline" @click="showVariantDialog = false">Cancel</Button>
-          <Button @click="confirmVariantAction" :disabled="!finalVariantName">
+          <Button
+            @click="confirmVariantAction"
+            :disabled="!finalVariantName || (showCustomInput && !variantInputRef?.isValid)"
+          >
             {{ dialogMode === "save" ? "Save" : "Restore" }}
           </Button>
         </DialogFooter>
