@@ -3,10 +3,12 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useDisplayConfigs } from "@/composables/useDisplayConfigs";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Search, Edit, Copy, Trash2, Eye, Save, Upload } from "lucide-vue-next";
 import DisplayPreview from "./DisplayPreview.vue";
 import LockWidget from "@/components/shared/LockWidget.vue";
@@ -98,19 +100,35 @@ async function restoreFromFiles() {
         <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input v-model="searchQuery" placeholder="Search displays..." class="pl-10" />
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-4">
         <Button @click="createNew">
           <Plus class="mr-2 h-4 w-4" />
           Create Display
         </Button>
-        <Button @click="saveToFiles" variant="outline" :disabled="isSaving">
-          <Save class="mr-2 h-4 w-4" />
-          {{ isSaving ? "Saving..." : "Save to File" }}
-        </Button>
-        <Button @click="restoreFromFiles" variant="outline" :disabled="isRestoring">
-          <Upload class="mr-2 h-4 w-4" />
-          {{ isRestoring ? "Restoring..." : "Restore from File" }}
-        </Button>
+        <ButtonGroup>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button @click="saveToFiles" variant="outline" :disabled="isSaving">
+                <Save class="mr-2 h-4 w-4" />
+                {{ isSaving ? "Saving..." : "Save" }}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Save to JSON file</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button @click="restoreFromFiles" variant="outline" :disabled="isRestoring">
+                <Upload class="mr-2 h-4 w-4" />
+                {{ isRestoring ? "Restoring..." : "Restore" }}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Restore from JSON file</p>
+            </TooltipContent>
+          </Tooltip>
+        </ButtonGroup>
       </div>
     </div>
 
