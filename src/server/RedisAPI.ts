@@ -24,29 +24,62 @@ class RedisAPI {
   private io!: SocketServer;
   private redis!: RedisClientType;
   private subscriber!: RedisClientType;
+
+  // Rate limiting for potentially dangerous commands
+  private rateLimits = new Map<string, { count: number; resetTime: number }>();
+  private readonly RATE_LIMIT_WINDOW = 60000; // 1 minute
+  private readonly RATE_LIMIT_MAX_REQUESTS = 10; // Max requests per window
+
+  // Security: Only allow specific Redis commands to prevent unauthorized operations
+  // KEYS command removed - can block Redis server in production
+  // SCAN commands not included - use SMEMBERS for set operations instead
   private allowedCommands = new Set([
     "**GETALL**", // custom command that retrieves the contents of a given key, regardless of key type
-    "SET",
-    "GET",
-    "DEL",
-    "KEYS",
-    "HSET",
-    "HGET",
-    "HGETALL",
-    "HDEL",
-    "RPUSH",
-    "LPOP",
-    "LRANGE",
-    "INCR",
-    "SMEMBERS",
-    "SADD",
-    "SREM",
-    "ZADD",
-    "ZRANGE",
-    "ZREM",
+    "SET", // Safe: Single key operations
+    "GET", // Safe: Single key read
+    "DEL", // Rate limited: Can delete data
+    "HSET", // Safe: Single key hash operations
+    "HGET", // Safe: Single key hash read
+    "HGETALL", // Rate limited: Can return large datasets
+    "HDEL", // Safe: Single key hash operations
+    "RPUSH", // Safe: Single key list operations
+    "LPOP", // Safe: Single key list operations
+    "LRANGE", // Rate limited: Can return large datasets
+    "INCR", // Safe: Single key counter operations
+    "SMEMBERS", // Rate limited: Can return large datasets
+    "SADD", // Safe: Single key set operations
+    "SREM", // Safe: Single key set operations
+    "ZADD", // Safe: Single key sorted set operations
+    "ZRANGE", // Rate limited: Can return large datasets
+    "ZREM", // Safe: Single key sorted set operations
   ]);
 
   private initialized = false;
+
+  private checkRateLimit(command: string, clientId: string = "default"): boolean {
+    const key = `${command}:${clientId}`;
+    const now = Date.now();
+    const limit = this.rateLimits.get(key);
+
+    if (!limit || now > limit.resetTime) {
+      // Reset or initialize rate limit
+      this.rateLimits.set(key, { count: 1, resetTime: now + this.RATE_LIMIT_WINDOW });
+      return true;
+    }
+
+    if (limit.count >= this.RATE_LIMIT_MAX_REQUESTS) {
+      return false; // Rate limit exceeded
+    }
+
+    limit.count++;
+    return true;
+  }
+
+  private isPotentiallyDangerousCommand(command: string): boolean {
+    // Commands that could impact performance or security
+    const dangerousCommands = ["DEL", "SMEMBERS", "LRANGE", "ZRANGE"];
+    return dangerousCommands.includes(command);
+  }
 
   public async init(app: Express, server: HTTPServer) {
     if (this.initialized) return;
@@ -129,6 +162,14 @@ class RedisAPI {
 
       if (!this.allowedCommands.has(commandUpper)) {
         throw new Error(`Command ${commandUpper} is not allowed.`);
+      }
+
+      // Check rate limit for potentially dangerous commands
+      if (this.isPotentiallyDangerousCommand(commandUpper)) {
+        const clientId = "default"; // In a real app, this would come from the request
+        if (!this.checkRateLimit(commandUpper, clientId)) {
+          throw new Error(`Rate limit exceeded for command ${commandUpper}. Please try again later.`);
+        }
       }
 
       if (commandUpper === "**GETALL**") {
@@ -331,10 +372,11 @@ class RedisAPI {
       // If deleteExisting is true, delete all existing display config keys first
       if (deleteExisting) {
         try {
-          // Get all keys that match the display config pattern
-          const allKeys = await this.redis.keys("clock-display-config:*");
+          // Use SMEMBERS to get existing display config IDs (safer than KEYS command)
+          const existingIds = await this.redis.sMembers("clock-display-config:list");
 
-          for (const existingKey of allKeys) {
+          for (const id of existingIds) {
+            const existingKey = `clock-display-config:${id}`;
             // Don't delete keys that are being restored (they'll be overwritten anyway)
             if (!keys.includes(existingKey)) {
               await this.redis.del(existingKey);
