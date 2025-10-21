@@ -5,24 +5,30 @@ import { toast } from "vue-sonner";
 
 const DEFAULT_DURATION = 10000;
 
-// ✅ Global variable to track if toast listener is already added
+// ✅ Global state management for toast system
 let isToastListenerAdded = false;
+let activeSubscribers = new Set<symbol>();
 
 export function useToaster() {
   const subscriber = Symbol("useToasterSubscriber"); // ✅ Unique reference for each component
 
   onMounted(() => {
-    if (isToastListenerAdded) return; // ✅ Prevent duplicate listeners
-    isToastListenerAdded = true;
+    // Add this subscriber to the active set
+    activeSubscribers.add(subscriber);
+    
+    // Only set up the listener if it's not already added
+    if (!isToastListenerAdded) {
+      isToastListenerAdded = true;
 
-    SyncBus.on({ subscriber }, "toast", (payload) => {
-      const curPath = window.location.pathname;
-      const isDisplays = payload.deliverTo === "displays" && curPath.includes("/displays/");
-      const isHome = payload.deliverTo === "home" && curPath === "/";
-      const isAll = payload.deliverTo === "all";
+      SyncBus.on({ subscriber }, "toast", (payload) => {
+        const curPath = window.location.pathname;
+        const isDisplays = payload.deliverTo === "displays" && curPath.includes("/displays/");
+        const isHome = payload.deliverTo === "home" && curPath === "/";
+        const isAll = payload.deliverTo === "all";
 
-      if (isDisplays || isHome || isAll) createToast(payload);
-    });
+        if (isDisplays || isHome || isAll) createToast(payload);
+      });
+    }
   });
 
   function createToast(payload: Events["toast"]) {
@@ -45,8 +51,15 @@ export function useToaster() {
    * Cleanup: Automatically remove toast listeners on component unmount.
    */
   onUnmounted(() => {
-    SyncBus.off({ subscriber }, "toast");
-    isToastListenerAdded = false; // ✅ Reset when all components using `useToaster()` unmount
+    // Remove this subscriber from the active set
+    activeSubscribers.delete(subscriber);
+    
+    // Only remove the listener if this was the component that set it up
+    // and there are no other active subscribers
+    if (activeSubscribers.size === 0 && isToastListenerAdded) {
+      SyncBus.off({ subscriber }, "toast");
+      isToastListenerAdded = false;
+    }
   });
 
   return { emitToast };
