@@ -24,6 +24,8 @@ import { Plus, Search, Edit, Copy, Trash2, Eye, Save, Upload } from "lucide-vue-
 import DisplayPreview from "./DisplayPreview.vue";
 import LockWidget from "@/components/shared/LockWidget.vue";
 import { useRedisFileSync } from "@/composables/useRedisFileSync";
+import { REDIS_CONFIG } from "@/config/constants";
+import { getDisplayConfigKey } from "@/utils/redisKeyUtils";
 
 const router = useRouter();
 const { displayConfigs, isLoading, loadDisplayConfigs, deleteDisplayConfig, duplicateDisplayConfig } =
@@ -120,7 +122,7 @@ async function openSaveDialog() {
   customVariantName.value = "";
 
   // Get variants only for display configurations
-  availableVariants.value = await listAllVariants(/^clock-display-config\..*\.json$/);
+  availableVariants.value = await listAllVariants(REDIS_CONFIG.KEYS.DISPLAY_CONFIG.FILE_PATTERN);
 
   showVariantDialog.value = true;
 }
@@ -132,7 +134,7 @@ async function openRestoreDialog() {
   customVariantName.value = "";
 
   // Get variants only for display configurations
-  availableVariants.value = await listAllVariants(/^clock-display-config\..*\.json$/);
+  availableVariants.value = await listAllVariants(REDIS_CONFIG.KEYS.DISPLAY_CONFIG.FILE_PATTERN);
 
   showVariantDialog.value = true;
 }
@@ -153,7 +155,7 @@ async function confirmVariantAction() {
 
   if (dialogMode.value === "save") {
     // For save: use current display configs
-    const allKeys = displayConfigs.value.map((c) => `clock-display-config:${c.id}`);
+    const allKeys = displayConfigs.value.map((c) => getDisplayConfigKey(c.id));
     await saveKeysToFiles(allKeys, variant, true);
   } else {
     // For restore: get ALL keys that exist for this variant

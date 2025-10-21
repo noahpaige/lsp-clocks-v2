@@ -2,11 +2,12 @@ import { RedisClientType, createClient } from "redis";
 import fs from "fs/promises";
 import path from "path";
 import { executePostRestoreHooks } from "./redis-hooks";
+import { REDIS_CONFIG } from "@/config/constants";
 
 // Central REGEX registry of key patterns that should automatically get version metadata
 // if you want a key (or keys) to automatically get version metadata, add the regex to this array
 const VERSIONED_KEY_PATTERNS = [
-  /^clock-display-config:/,
+  ...REDIS_CONFIG.VERSIONING.PATTERNS,
   // Add more patterns here as needed
 ];
 

@@ -1,9 +1,11 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import io from "socket.io-client";
 import { useRedisCommand } from "./useRedisCommand";
+import { getWebSocketUrl } from "@/utils/apiUtils";
+import { WS_CONFIG } from "@/config/constants";
 
-const WS_URL = "http://localhost:3000";
-const INITIAL_EVENT = "__initial__";
+const WS_URL = getWebSocketUrl();
+const INITIAL_EVENT = WS_CONFIG.EVENTS.INITIAL;
 
 export function useRedisObserver() {
   let socket: ReturnType<typeof io> | null = null;

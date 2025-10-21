@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useEditLock } from "@/composables/useEditLock";
+import { getDisplayConfigKey } from "@/utils/redisKeyUtils";
 import { useSessionId } from "@/composables/useSessionId";
 import { useToaster } from "@/composables/useToaster";
 import type { EditLock } from "@/types/EditLock";
@@ -65,7 +66,7 @@ function onRequestLock() {
 
 async function onForceLock() {
   const configName = props.configName || props.configId;
-  const fullKey = `clock-display-config:${props.configId}`;
+  const fullKey = getDisplayConfigKey(props.configId);
 
   try {
     await acquireLock(fullKey);
@@ -87,7 +88,7 @@ async function onForceLock() {
 
 async function onReleaseLock() {
   const configName = props.configName || props.configId;
-  const fullKey = `clock-display-config:${props.configId}`;
+  const fullKey = getDisplayConfigKey(props.configId);
 
   try {
     await releaseLock(fullKey);
@@ -110,7 +111,7 @@ async function onReleaseLock() {
 // Lifecycle
 onMounted(async () => {
   // Set up real-time observer for lock changes
-  const fullKey = `clock-display-config:${props.configId}`;
+  const fullKey = getDisplayConfigKey(props.configId);
   observeLock(fullKey, (lock) => {
     // the key doesn't exist. This means nobody owns the lock.
     if (!lock) {

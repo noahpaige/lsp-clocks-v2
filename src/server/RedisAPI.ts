@@ -14,10 +14,12 @@ import {
   safeReadJsonFile,
   safeWriteJsonFile,
   REDIS_KEYS_DIR,
-} from "./redis-file-utils";
+} from "./redis-persistence-utils";
 import { isValidVariant } from "@/shared/variantUtils";
 import path from "path";
 import { executePostRestoreHooks } from "./redis-hooks";
+import { API_CONFIG, SECURITY_CONFIG } from "@/config/constants";
+import { getDisplayConfigListKey, getDisplayConfigKey, extractDisplayConfigId } from "@/utils/redisKeyUtils";
 
 class RedisAPI {
   private app!: Express;
@@ -27,8 +29,8 @@ class RedisAPI {
 
   // Rate limiting for potentially dangerous commands
   private rateLimits = new Map<string, { count: number; resetTime: number }>();
-  private readonly RATE_LIMIT_WINDOW = 60000; // 1 minute
-  private readonly RATE_LIMIT_MAX_REQUESTS = 10; // Max requests per window
+  private readonly RATE_LIMIT_WINDOW = SECURITY_CONFIG.RATE_LIMIT.WINDOW_MS;
+  private readonly RATE_LIMIT_MAX_REQUESTS = SECURITY_CONFIG.RATE_LIMIT.MAX_REQUESTS;
 
   // Security: Only allow specific Redis commands to prevent unauthorized operations
   // KEYS command removed - can block Redis server in production
@@ -77,8 +79,7 @@ class RedisAPI {
 
   private isPotentiallyDangerousCommand(command: string): boolean {
     // Commands that could impact performance or security
-    const dangerousCommands = ["DEL", "SMEMBERS", "LRANGE", "ZRANGE"];
-    return dangerousCommands.includes(command);
+    return (SECURITY_CONFIG.COMMANDS.RATE_LIMITED as readonly string[]).includes(command);
   }
 
   public async init(app: Express, server: HTTPServer) {
@@ -116,27 +117,27 @@ class RedisAPI {
   }
 
   private configureRoutes() {
-    this.app.post("/api/items", async (req, res) => {
+    this.app.post(API_CONFIG.ENDPOINTS.REDIS_COMMANDS, async (req, res) => {
       await this.onMessage(req, res);
     });
 
-    this.app.post("/api/save-restore/save-keys", async (req, res) => {
+    this.app.post(API_CONFIG.ENDPOINTS.SAVE_RESTORE.SAVE_KEYS, async (req, res) => {
       await this.saveKeysToFiles(req, res);
     });
 
-    this.app.post("/api/save-restore/restore-keys", async (req, res) => {
+    this.app.post(API_CONFIG.ENDPOINTS.SAVE_RESTORE.RESTORE_KEYS, async (req, res) => {
       await this.restoreKeysFromFiles(req, res);
     });
 
-    this.app.get("/api/save-restore/list-variants", async (req, res) => {
+    this.app.get(API_CONFIG.ENDPOINTS.SAVE_RESTORE.LIST_VARIANTS, async (req, res) => {
       await this.listVariants(req, res);
     });
 
-    this.app.get("/api/save-restore/list-keys", async (req, res) => {
+    this.app.get(API_CONFIG.ENDPOINTS.SAVE_RESTORE.LIST_KEYS, async (req, res) => {
       await this.listKeys(req, res);
     });
 
-    this.app.get("/api/save-restore/list-all-variants", async (req, res) => {
+    this.app.get(API_CONFIG.ENDPOINTS.SAVE_RESTORE.LIST_ALL_VARIANTS, async (req, res) => {
       await this.listAllVariants(req, res);
     });
   }
@@ -373,10 +374,10 @@ class RedisAPI {
       if (deleteExisting) {
         try {
           // Use SMEMBERS to get existing display config IDs (safer than KEYS command)
-          const existingIds = await this.redis.sMembers("clock-display-config:list");
+          const existingIds = await this.redis.sMembers(getDisplayConfigListKey());
 
           for (const id of existingIds) {
-            const existingKey = `clock-display-config:${id}`;
+            const existingKey = getDisplayConfigKey(id);
             // Don't delete keys that are being restored (they'll be overwritten anyway)
             if (!keys.includes(existingKey)) {
               await this.redis.del(existingKey);

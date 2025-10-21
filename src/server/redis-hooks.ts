@@ -1,4 +1,6 @@
 import { RedisClientType } from "redis";
+import { REDIS_CONFIG } from "@/config/constants";
+import { getDisplayConfigKey, extractDisplayConfigId } from "@/utils/redisKeyUtils";
 
 /**
  * Hook function that runs after a key is restored to Redis
@@ -20,12 +22,14 @@ interface HookRegistration {
  */
 const POST_RESTORE_HOOKS: HookRegistration[] = [
   {
-    pattern: /^clock-display-config:/,
+    pattern: REDIS_CONFIG.KEYS.DISPLAY_CONFIG.PATTERN,
     description: "Maintain clock-display-config:list set",
     hook: async (redis, key, _data) => {
-      const id = key.replace("clock-display-config:", "");
-      await redis.sAdd("clock-display-config:list", id);
-      console.log(`Added ${id} to clock-display-config:list`);
+      const id = extractDisplayConfigId(key);
+      if (id) {
+        await redis.sAdd(REDIS_CONFIG.KEYS.DISPLAY_CONFIG.LIST, id);
+        console.log(`Added ${id} to ${REDIS_CONFIG.KEYS.DISPLAY_CONFIG.LIST}`);
+      }
     },
   },
   // Add more hooks here as needed

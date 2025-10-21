@@ -1,8 +1,10 @@
 import { ref } from "vue";
 import { useToaster } from "./useToaster";
 import { sanitizeVariant, isValidVariant } from "@/shared/variantUtils";
+import { getApiUrl } from "@/utils/apiUtils";
+import { API_CONFIG } from "@/config/constants";
 
-const API_BASE = "http://localhost:3000/api/save-restore";
+const API_BASE = getApiUrl(API_CONFIG.ENDPOINTS.SAVE_RESTORE.BASE);
 
 export function useRedisFileSync() {
   const { emitToast } = useToaster();

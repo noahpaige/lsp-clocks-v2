@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useDisplayConfigs } from "@/composables/useDisplayConfigs";
 import { useEditLock } from "@/composables/useEditLock";
+import { getDisplayConfigKey } from "@/utils/redisKeyUtils";
 import ConflictResolution from "./ConflictResolution.vue";
 import { ClockDisplayConfig } from "@/types/ClockDisplayConfig";
 import { ClockRowConfig, defaultRowConfig } from "@/types/ClockRowConfig";
@@ -45,10 +46,10 @@ onMounted(async () => {
       originalLastModifiedAt.value = existing.lastModifiedAt || 0;
 
       // Check if someone else is editing before acquiring our lock
-      lockInfo.value = await checkLock(`clock-display-config:${configId.value}`);
+      lockInfo.value = await checkLock(getDisplayConfigKey(configId.value));
 
       // Acquire our own lock
-      const lockResult = await acquireLock(`clock-display-config:${configId.value}`);
+      const lockResult = await acquireLock(getDisplayConfigKey(configId.value));
       console.log("[DisplayConfigEditor] Lock acquired:", lockResult);
     } else {
       router.push("/config/display-configs");
@@ -60,7 +61,7 @@ onMounted(async () => {
 onBeforeUnmount(async () => {
   if (isEditMode.value && configId.value) {
     console.log("[DisplayConfigEditor] Releasing lock on unmount");
-    await releaseLock(`clock-display-config:${configId.value}`);
+    await releaseLock(getDisplayConfigKey(configId.value));
   }
 });
 
@@ -99,7 +100,7 @@ async function save() {
       // Release lock before navigating away
       if (configId.value) {
         console.log("[DisplayConfigEditor] Releasing lock after save");
-        await releaseLock(`clock-display-config:${configId.value}`);
+        await releaseLock(getDisplayConfigKey(configId.value));
       }
       router.push("/config/display-configs");
     }
@@ -114,7 +115,7 @@ async function cancel() {
   // Release lock before navigating away
   if (isEditMode.value && configId.value) {
     console.log("[DisplayConfigEditor] Releasing lock on cancel");
-    await releaseLock(`clock-display-config:${configId.value}`);
+    await releaseLock(getDisplayConfigKey(configId.value));
   }
   router.push("/config/display-configs");
 }
@@ -130,7 +131,7 @@ async function handleCancelConflict() {
   // Release lock before navigating away
   if (isEditMode.value && configId.value) {
     console.log("[DisplayConfigEditor] Releasing lock on conflict cancel");
-    await releaseLock(`clock-display-config:${configId.value}`);
+    await releaseLock(getDisplayConfigKey(configId.value));
   }
   showConflictModal.value = false;
   router.push("/config/display-configs");

@@ -1,4 +1,7 @@
-const API_URL = "http://localhost:3000/api/items";
+import { getApiUrl } from "@/utils/apiUtils";
+import { API_CONFIG } from "@/config/constants";
+
+const API_URL = getApiUrl(API_CONFIG.ENDPOINTS.REDIS_COMMANDS);
 
 export function useRedisCommand() {
   const queue: { command: string; key: string; args?: any[] }[] = [];

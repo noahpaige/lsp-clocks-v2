@@ -1,19 +1,30 @@
 <script setup lang="ts">
 import Clock from "@/components/Clock/Clock.vue";
 import AnimatedBackground4 from "@/components/AnimatedBackground4.vue";
-import { data } from "@/lib/clockdata";
-import { ref } from "vue";
+import { reactive, ref } from "vue";
 import { useIntervalFn } from "@vueuse/core";
+import { ClockDataType, parseClockData } from "@/types/ClockData";
+import { useRedisObserver } from "@/composables/useRedisObserver";
 
-const clockData = ref(data);
+const { addObserver } = useRedisObserver();
 
-useIntervalFn(() => {
-  clockData.value.utc += 1000;
-  clockData.value.local += 1000;
-  clockData.value.t += 1000;
-  clockData.value.l += 1000;
-  clockData.value.met += 1000;
-}, 1000);
+const clockData = reactive<ClockDataType>({
+  utc: 0,
+  local: 0,
+  timezoneStr: "",
+  t: 0,
+  l: 0,
+  holdRemaining: 0,
+  untilRestart: 0,
+  windowUsed: 0,
+  windowRemaining: 0,
+  tZero: 0,
+  met: 0,
+});
+addObserver("clockdata", (response) => {
+  const parsed = parseClockData(response.data);
+  Object.assign(clockData, parsed); // updates reactive object
+});
 </script>
 
 <template>

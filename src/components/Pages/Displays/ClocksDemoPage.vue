@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import Clock from "@/components/Clock/Clock.vue";
 import AnimatedBackground4 from "@/components/AnimatedBackground4.vue";
-import { data } from "@/lib/clockdata";
 import { reactive, ref } from "vue";
-import { useIntervalFn } from "@vueuse/core";
 import { ClockDataType, parseClockData } from "@/types/ClockData";
 import { useRedisObserver } from "@/composables/useRedisObserver";
 

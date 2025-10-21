@@ -9,6 +9,7 @@ import {
 } from "@/types/ClockDisplayConfig";
 import { withVersion, updateVersion } from "@/types/Versioned";
 import { useSessionId } from "./useSessionId";
+import { getDisplayConfigKey, getDisplayConfigListKey } from "@/utils/redisKeyUtils";
 
 // Local reactive state for all display configurations
 const displayConfigs = ref<ClockDisplayConfig[]>([]);
@@ -21,8 +22,8 @@ export function useDisplayConfigs() {
   const { sessionId } = useSessionId();
 
   // Redis key helpers
-  const DISPLAY_LIST_KEY = "clock-display-config:list";
-  const getDisplayKey = (id: string) => `clock-display-config:${id}`;
+  const DISPLAY_LIST_KEY = getDisplayConfigListKey();
+  const getDisplayKey = getDisplayConfigKey;
 
   async function loadDisplayConfigs() {
     isLoading.value = true;
@@ -177,11 +178,14 @@ export function useDisplayConfigs() {
     const original = getDisplayConfig(id);
     if (!original) return false;
 
+    // Strip any existing "-copy-<digits>" from id to avoid copy chains
+    const baseId = original.id.replace(/-copy-\d+$/, "");
     const duplicate: ClockDisplayConfig = {
       ...original,
-      id: `${original.id}-copy-${Date.now()}`,
-      name: `${original.name} (Copy)`,
+      id: `${baseId}-copy-${Date.now()}`,
+      name: original.name.endsWith(" (Copy)") ? original.name : `${original.name} (Copy)`,
     };
+
     return createDisplayConfig(duplicate);
   }
 
