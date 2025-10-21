@@ -3,14 +3,15 @@ import io from "socket.io-client";
 import { useRedisCommand } from "./useRedisCommand";
 import { getWebSocketUrl } from "@/utils/apiUtils";
 import { WS_CONFIG } from "@/config/constants";
+import type { RedisObserverCallback, RedisUpdateEvent, AddObserverOptions } from "@/types/RedisObserver";
 
 const WS_URL = getWebSocketUrl();
 const INITIAL_EVENT = WS_CONFIG.EVENTS.INITIAL;
 
 export function useRedisObserver() {
   let socket: ReturnType<typeof io> | null = null;
-  const observers = new Map<string, Function[]>();
-  const pendingQueue: { key: string; callback: Function }[] = [];
+  const observers = new Map<string, RedisObserverCallback[]>();
+  const pendingQueue: { key: string; callback: RedisObserverCallback; options?: AddObserverOptions }[] = [];
   const isConnected = ref(false);
   let reconnectAttempts = 0;
   const maxReconnectAttempts = 5;
@@ -75,7 +76,7 @@ export function useRedisObserver() {
       }
     });
 
-    socket.on("redis-update", (data: { key: string; event: string; data: any }) => {
+    socket.on("redis-update", (data: RedisUpdateEvent) => {
       observers.get(data.key)?.forEach((cb) => cb(data));
     });
   };
@@ -89,7 +90,7 @@ export function useRedisObserver() {
     }
   });
 
-  const addObserver = (key: string, callback: Function) => {
+  const addObserver = <T = any>(key: string, callback: RedisObserverCallback<T>, options?: AddObserverOptions) => {
     const add = () => {
       if (!observers.has(key)) {
         observers.set(key, []);
@@ -97,32 +98,54 @@ export function useRedisObserver() {
       }
 
       const callbacks = observers.get(key)!;
-      if (!callbacks.includes(callback)) {
-        callbacks.push(callback);
+      if (!callbacks.includes(callback as RedisObserverCallback)) {
+        callbacks.push(callback as RedisObserverCallback);
       }
 
-      sendInstantCommand("**GETALL**", key).then(({ data, error }) => {
-        if (!error) {
-          if (data === null) {
-            console.warn(`Key "${key}" does not exist, but subscriber was created anyway.`);
+      // Fetch initial value if not explicitly disabled
+      const shouldFetchInitial = options?.fetchInitial !== false;
+      if (shouldFetchInitial) {
+        sendInstantCommand("**GETALL**", key).then(({ data, error }) => {
+          if (!error) {
+            if (data === null) {
+              console.warn(`Key "${key}" does not exist, but subscriber was created anyway.`);
+            }
+            callback({ key, data, event: INITIAL_EVENT });
+          } else {
+            console.error(`Failed to fetch current value for key "${key}"`, error);
+            options?.onError?.(new Error(error));
           }
-          callback({ key, data, event: INITIAL_EVENT });
-        } else {
-          console.error(`Failed to fetch current value for key "${key}"`, error);
-        }
-      });
+        });
+      }
     };
 
     if (!socket || !isConnected.value) {
       console.warn(`Socket not connected yet, queuing observer for key: ${key}`);
-      pendingQueue.push({ key, callback });
+      pendingQueue.push({ key, callback: callback as RedisObserverCallback, options });
     } else {
       add();
     }
   };
 
+  const removeObserver = <T = any>(key: string, callback: RedisObserverCallback<T>) => {
+    const callbacks = observers.get(key);
+    if (callbacks) {
+      const index = callbacks.indexOf(callback as RedisObserverCallback);
+      if (index > -1) {
+        callbacks.splice(index, 1);
+      }
+
+      // Clean up if no more observers for this key
+      if (callbacks.length === 0) {
+        observers.delete(key);
+        socket?.emit("unsubscribe", key);
+      }
+    }
+  };
+
   return {
     addObserver,
+    removeObserver,
     isConnected,
     INITIAL_EVENT,
   };
