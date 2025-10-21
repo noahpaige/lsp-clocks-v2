@@ -30,6 +30,7 @@ const { emitToast } = useToaster();
 const lockStatus = ref<EditLock | null>(null);
 const isOwnLock = ref(false);
 const isLoading = ref(false);
+const isDropdownOpen = ref(false);
 
 // Computed
 const lockIconColorClass = computed(() => {
@@ -126,9 +127,15 @@ onMounted(async () => {
 </script>
 
 <template>
-  <DropdownMenu>
+  <DropdownMenu v-model:open="isDropdownOpen">
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" size="icon" :class="lockIconColorClass" title="Lock Status" :disabled="isLoading">
+      <Button
+        variant="ghost"
+        size="icon"
+        :class="[lockIconColorClass, { 'bg-accent': isDropdownOpen }]"
+        title="Lock Status"
+        :disabled="isLoading"
+      >
         <Lock v-if="lockStatus" class="h-4 w-4" />
         <LockOpen v-else class="h-4 w-4" />
       </Button>
