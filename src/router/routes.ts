@@ -50,7 +50,8 @@ const routes = [
       {
         path: "application-settings",
         name: "config-application-settings",
-        component: () => import("@/components/Pages/ConfigPage/views/general/ApplicationSettings.vue"),
+        component: () =>
+          import("@/components/Pages/ConfigPage/views/general/application-settings/ApplicationSettingsPage.vue"),
         meta: {
           showTopNav: true,
           title: "Application Settings",
@@ -59,20 +60,21 @@ const routes = [
         },
       },
       {
-        path: "display-configs",
-        name: "config-display-configs",
-        component: () => import("@/components/Pages/ConfigPage/views/displays/DisplayConfigsList.vue"),
+        path: "clock-displays",
+        name: "config-clock-displays",
+        component: () => import("@/components/Pages/ConfigPage/views/displays/clock-displays/ClockDisplaysPage.vue"),
         meta: {
           showTopNav: true,
-          title: "Display Configurations",
+          title: "Clock Displays",
           category: "displays",
           description: "Manage clock display layouts",
         },
       },
       {
-        path: "display-configs/create",
-        name: "config-display-config-create",
-        component: () => import("@/components/Pages/ConfigPage/views/displays/DisplayConfigEditor.vue"),
+        path: "clock-displays/create",
+        name: "config-clock-displays-create",
+        component: () =>
+          import("@/components/Pages/ConfigPage/views/displays/clock-displays/ClockDisplaysEditorPage.vue"),
         meta: {
           showTopNav: true,
           title: "Create Display Config",
@@ -81,9 +83,10 @@ const routes = [
         },
       },
       {
-        path: "display-configs/:id/edit",
-        name: "config-display-config-edit",
-        component: () => import("@/components/Pages/ConfigPage/views/displays/DisplayConfigEditor.vue"),
+        path: "clock-displays/:id/edit",
+        name: "config-clock-displays-edit",
+        component: () =>
+          import("@/components/Pages/ConfigPage/views/displays/clock-displays/ClockDisplaysEditorPage.vue"),
         meta: {
           showTopNav: true,
           title: "Edit Display Config",
@@ -94,7 +97,7 @@ const routes = [
       {
         path: "theme",
         name: "config-theme",
-        component: () => import("@/components/Pages/ConfigPage/views/appearance/ThemeSettings.vue"),
+        component: () => import("@/components/Pages/ConfigPage/views/appearance/theme/ThemePage.vue"),
         meta: {
           showTopNav: true,
           title: "Theme Settings",
@@ -104,8 +107,9 @@ const routes = [
       },
       {
         path: "notifications",
-        name: "config-notifications",
-        component: () => import("@/components/Pages/ConfigPage/views/notifications/NotificationSettings.vue"),
+        name: "notifications",
+        component: () =>
+          import("@/components/Pages/ConfigPage/views/notifications/notifications/NotificationSettingsPage.vue"),
         meta: {
           showTopNav: true,
           title: "Notification Settings",

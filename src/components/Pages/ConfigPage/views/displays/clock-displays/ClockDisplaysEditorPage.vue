@@ -4,7 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useDisplayConfigs } from "@/composables/useDisplayConfigs";
 import { useEditLock } from "@/composables/useEditLock";
 import { getDisplayConfigKey } from "@/utils/redisKeyUtils";
-import ConflictResolution from "./ConflictResolution.vue";
+import ConflictResolution from "@/components/shared/ConflictResolution.vue";
 import { ClockDisplayConfig } from "@/types/ClockDisplayConfig";
 import { ClockRowConfig, defaultRowConfig } from "@/types/ClockRowConfig";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ const router = useRouter();
 const { getDisplayConfig, createDisplayConfig, updateDisplayConfigWithVersion } = useDisplayConfigs();
 const { acquireLock, releaseLock, checkLock } = useEditLock();
 
-const isEditMode = computed(() => route.name === "config-display-config-edit");
+const isEditMode = computed(() => route.name === "config-clock-displays-edit");
 const configId = computed(() => route.params.id as string);
 
 const displayConfig = ref<ClockDisplayConfig>({
@@ -84,7 +84,7 @@ onMounted(async () => {
       const lockResult = await acquireLock(getDisplayConfigKey(configId.value));
       console.log("[DisplayConfigEditor] Lock acquired:", lockResult);
     } else {
-      router.push("/config/display-configs");
+      router.push("/config/clock-displays");
     }
   }
 });
@@ -133,7 +133,7 @@ async function save() {
         console.log("[DisplayConfigEditor] Releasing lock after save");
         await releaseLock(getDisplayConfigKey(configId.value));
       }
-      router.push("/config/display-configs");
+      router.push("/config/clock-displays");
     }
   } else {
     const success = await createDisplayConfig(displayConfig.value);
@@ -148,7 +148,7 @@ async function cancel() {
     console.log("[DisplayConfigEditor] Releasing lock on cancel");
     await releaseLock(getDisplayConfigKey(configId.value));
   }
-  router.push("/config/display-configs");
+  router.push("/config/clock-displays");
 }
 
 function handleOverwrite() {

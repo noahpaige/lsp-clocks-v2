@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Edit, Copy, Trash2, Eye, Save, Upload, Loader2 } from "lucide-vue-next";
-import DisplayPreview from "./DisplayPreview.vue";
+import DisplayPreview from "./ClockDisplayPreview.vue";
 import LockWidget from "@/components/shared/LockWidget.vue";
 import VariantNameInput from "@/components/shared/VariantNameInput.vue";
 import { useRedisFileSync } from "@/composables/useRedisFileSync";
@@ -83,11 +83,11 @@ onMounted(() => {
 });
 
 function createNew() {
-  router.push("/config/display-configs/create");
+  router.push("/config/clock-displays/create");
 }
 
 function editConfig(id: string) {
-  router.push(`/config/display-configs/${id}/edit`);
+  router.push(`/config/clock-displays/${id}/edit`);
 }
 
 async function duplicateConfig(id: string) {

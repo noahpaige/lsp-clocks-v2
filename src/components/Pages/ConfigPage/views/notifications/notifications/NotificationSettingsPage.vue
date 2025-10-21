@@ -5,6 +5,8 @@
         <p class="text-muted-foreground">This configuration page will be implemented soon.</p>
       </CardContent>
     </Card>
+
+    some more text!!!
   </div>
 </template>
 

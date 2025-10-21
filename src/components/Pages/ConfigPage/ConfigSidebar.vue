@@ -38,8 +38,8 @@ const sidebarSections = [
     label: "Displays",
     items: [
       {
-        title: "Display Configurations",
-        path: "/config/display-configs",
+        title: "Clock Displays",
+        path: "/config/clock-displays",
         icon: Monitor,
         keywords: ["display", "clock", "config", "layout", "configurations"],
       },
