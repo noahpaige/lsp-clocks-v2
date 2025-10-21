@@ -12,6 +12,8 @@ export interface RouteMeta {
   icon?: Component;
   keywords?: string[];
   showInSidebar?: boolean;
+  topLevel?: boolean; // If true, renders at top level without a category section
+  order?: number; // Lower numbers appear first (default: 999)
 }
 
 // Category labels for organizing sidebar
@@ -20,6 +22,14 @@ export const CATEGORY_LABELS: Record<string, string> = {
   displays: "Displays",
   appearance: "Appearance",
   notifications: "Notifications",
+};
+
+// Category ordering - lower numbers appear first
+export const CATEGORY_ORDER: Record<string, number> = {
+  general: 1,
+  displays: 2,
+  appearance: 3,
+  notifications: 4,
 };
 
 const routes = [
@@ -81,6 +91,7 @@ const routes = [
           icon: Settings,
           keywords: ["app", "title", "general", "redis", "settings"],
           showInSidebar: true,
+          order: 1,
         },
       },
       {
@@ -95,6 +106,7 @@ const routes = [
           icon: Clock,
           keywords: ["display", "clock", "config", "layout", "configurations"],
           showInSidebar: true,
+          order: 1,
         },
       },
       {
@@ -126,7 +138,7 @@ const routes = [
       {
         path: "theme",
         name: "config-theme",
-        component: () => import("@/components/Pages/ConfigPage/views/appearance/theme/ThemePage.vue"),
+        component: () => import("@/components/Pages/ConfigPage/views/theme/ThemePage.vue"),
         meta: {
           showTopNav: true,
           title: "Theme",
@@ -135,13 +147,14 @@ const routes = [
           icon: Palette,
           keywords: ["theme", "dark", "light", "colors", "appearance"],
           showInSidebar: true,
+          topLevel: true,
+          order: 3, // After General (1) and Displays (2) sections
         },
       },
       {
         path: "notifications",
         name: "notifications",
-        component: () =>
-          import("@/components/Pages/ConfigPage/views/notifications/notifications/NotificationSettingsPage.vue"),
+        component: () => import("@/components/Pages/ConfigPage/views/notifications/NotificationSettingsPage.vue"),
         meta: {
           showTopNav: true,
           title: "Notification Settings",
@@ -150,6 +163,8 @@ const routes = [
           icon: Bell,
           keywords: ["notifications", "toast", "alerts", "messages"],
           showInSidebar: true,
+          topLevel: true,
+          order: 4, // After General (1), Displays (2), and Theme (3)
         },
       },
     ],
