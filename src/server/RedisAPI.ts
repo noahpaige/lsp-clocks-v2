@@ -18,7 +18,7 @@ import {
 import { isValidVariant } from "@/shared/variantUtils";
 import path from "path";
 import { executePostRestoreHooks } from "./redis-hooks";
-import { API_CONFIG, SECURITY_CONFIG } from "@/config/constants";
+import { API_CONFIG, SECURITY_CONFIG, SERVER_CONFIG } from "@/config/constants";
 import { getDisplayConfigListKey, getDisplayConfigKey, extractDisplayConfigId } from "@/utils/redisKeyUtils";
 
 class RedisAPI {
@@ -89,17 +89,17 @@ class RedisAPI {
     // Use CORS middleware for Express
     this.app.use(
       cors({
-        origin: "http://localhost:5173", // change this to your client URL
-        credentials: true,
+        origin: SERVER_CONFIG.CORS_ORIGINS,
+        credentials: SERVER_CONFIG.CORS_CREDENTIALS,
       })
     );
 
     // Configure Socket.IO with CORS options
     this.io = new SocketServer(server, {
       cors: {
-        origin: "http://localhost:5173", // change this to your client URL
+        origin: SERVER_CONFIG.CORS_ORIGINS,
         methods: ["GET", "POST"],
-        credentials: true,
+        credentials: SERVER_CONFIG.CORS_CREDENTIALS,
       },
     });
 

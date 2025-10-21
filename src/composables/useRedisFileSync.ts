@@ -7,6 +7,27 @@ import { logError, createUserErrorMessage } from "@/utils/errorUtils";
 
 const API_BASE = getApiUrl(API_CONFIG.ENDPOINTS.SAVE_RESTORE.BASE);
 
+/**
+ * Validate parameters for save/restore operations
+ */
+function validateSaveRestoreParams(keys: string[], variant: string): { valid: boolean; error?: string } {
+  if (!Array.isArray(keys) || keys.length === 0) {
+    return { valid: false, error: "At least one key is required" };
+  }
+
+  if (!isValidVariant(variant)) {
+    return { valid: false, error: "Invalid variant name. Use alphanumeric characters, hyphens, or underscores." };
+  }
+
+  // Check for invalid key formats (Redis keys should contain ':')
+  const invalidKeys = keys.filter((k) => !k || typeof k !== "string" || !k.includes(":"));
+  if (invalidKeys.length > 0) {
+    return { valid: false, error: `Invalid key format: ${invalidKeys[0] || "empty key"}` };
+  }
+
+  return { valid: true };
+}
+
 export function useRedisFileSync() {
   const { emitToast } = useToaster();
   const isSaving = ref(false);
@@ -18,8 +39,10 @@ export function useRedisFileSync() {
     stripVersionFields: boolean = true,
     deleteOrphans: boolean = true
   ): Promise<boolean> {
-    if (!isValidVariant(variant)) {
-      emitToast({ title: "Invalid variant name", type: "error", deliverTo: "all" });
+    // Validate parameters
+    const validation = validateSaveRestoreParams(keys, variant);
+    if (!validation.valid) {
+      emitToast({ title: validation.error!, type: "error", deliverTo: "all" });
       return false;
     }
 
@@ -75,8 +98,10 @@ export function useRedisFileSync() {
     addVersionFields: boolean = true,
     deleteExisting: boolean = true
   ): Promise<boolean> {
-    if (!isValidVariant(variant)) {
-      emitToast({ title: "Invalid variant name", type: "error", deliverTo: "all" });
+    // Validate parameters
+    const validation = validateSaveRestoreParams(keys, variant);
+    if (!validation.valid) {
+      emitToast({ title: validation.error!, type: "error", deliverTo: "all" });
       return false;
     }
 

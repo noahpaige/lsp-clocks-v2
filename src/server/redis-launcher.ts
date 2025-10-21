@@ -1,6 +1,7 @@
 import { exec, spawn } from "child_process";
 import os from "os";
 import path from "path";
+import { SERVER_CONFIG } from "@/config/constants";
 
 const fs = require("fs-extra");
 
@@ -28,12 +29,17 @@ export function launchRedisDB() {
     }
 
     console.log(`Starting Redis server in the background: ${redisServerBinary}`);
+    console.log(`Redis configuration: port=${SERVER_CONFIG.REDIS_PORT}, bind=${SERVER_CONFIG.REDIS_BIND}`);
 
     // Start Redis server as a detached process with common data directory
-    const serverProcess = spawn(redisServerBinary, ["--port", "6379", "--bind", "127.0.0.1", "--dir", redisDir], {
-      // detached: true,
-      stdio: "ignore",
-    });
+    const serverProcess = spawn(
+      redisServerBinary,
+      ["--port", SERVER_CONFIG.REDIS_PORT.toString(), "--bind", SERVER_CONFIG.REDIS_BIND, "--dir", redisDir],
+      {
+        // detached: true,
+        stdio: "ignore",
+      }
+    );
 
     serverProcess.unref(); // Allows Node.js to exit independently of the Redis process
 
