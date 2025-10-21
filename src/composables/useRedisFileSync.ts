@@ -3,6 +3,7 @@ import { useToaster } from "./useToaster";
 import { sanitizeVariant, isValidVariant } from "@/shared/variantUtils";
 import { getApiUrl } from "@/utils/apiUtils";
 import { API_CONFIG } from "@/config/constants";
+import { logError, createUserErrorMessage } from "@/utils/errorUtils";
 
 const API_BASE = getApiUrl(API_CONFIG.ENDPOINTS.SAVE_RESTORE.BASE);
 
@@ -54,12 +55,14 @@ export function useRedisFileSync() {
         }
         return true;
       } else {
-        emitToast({ title: "Failed to save keys", type: "error", deliverTo: "all" });
+        const errorMsg = createUserErrorMessage("save to variant", variant);
+        emitToast({ ...errorMsg, type: "error", deliverTo: "all" });
         return false;
       }
     } catch (e) {
-      console.error(e);
-      emitToast({ title: "Error saving keys to files", type: "error", deliverTo: "all" });
+      logError("useRedisFileSync", "save keys to files", e, { variant, keyCount: keys.length });
+      const errorMsg = createUserErrorMessage("save to variant", variant, e);
+      emitToast({ ...errorMsg, type: "error", deliverTo: "all" });
       return false;
     } finally {
       isSaving.value = false;
@@ -115,12 +118,14 @@ export function useRedisFileSync() {
         }
         return true;
       } else {
-        emitToast({ title: "Failed to restore keys", type: "error", deliverTo: "all" });
+        const errorMsg = createUserErrorMessage("restore from variant", variant);
+        emitToast({ ...errorMsg, type: "error", deliverTo: "all" });
         return false;
       }
     } catch (e) {
-      console.error(e);
-      emitToast({ title: "Error restoring keys from files", type: "error", deliverTo: "all" });
+      logError("useRedisFileSync", "restore keys from files", e, { variant, keyCount: keys.length });
+      const errorMsg = createUserErrorMessage("restore from variant", variant, e);
+      emitToast({ ...errorMsg, type: "error", deliverTo: "all" });
       return false;
     } finally {
       isRestoring.value = false;
@@ -133,7 +138,7 @@ export function useRedisFileSync() {
       const result = await response.json();
       return result.variants || [];
     } catch (e) {
-      console.error(e);
+      logError("useRedisFileSync", "list variants for key", e, { key });
       return [];
     }
   }
@@ -144,7 +149,7 @@ export function useRedisFileSync() {
       const result = await response.json();
       return result.keys || [];
     } catch (e) {
-      console.error(e);
+      logError("useRedisFileSync", "list keys for variant", e, { variant });
       return [];
     }
   }
@@ -158,7 +163,9 @@ export function useRedisFileSync() {
       const result = await response.json();
       return result.variants || [];
     } catch (e) {
-      console.error(e);
+      logError("useRedisFileSync", "list all variants", e, {
+        pattern: keyPattern?.source,
+      });
       return [];
     }
   }

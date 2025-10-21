@@ -3,6 +3,7 @@ import { useRedisCommand } from "./useRedisCommand";
 import { useRedisObserver } from "./useRedisObserver";
 import { useSessionId } from "./useSessionId";
 import { parseEditLock, type EditLock } from "@/types/EditLock";
+import { logError } from "@/utils/errorUtils";
 
 const LOCK_DURATION_MS = 300000; // 5 minutes
 const LOCK_REFRESH_INTERVAL_MS = 60000; // 1 minute
@@ -35,7 +36,11 @@ export function useEditLock() {
       startRefresh(redisKey);
       return lock;
     } catch (e) {
-      console.error(`[useEditLock] Failed to acquire lock for ${redisKey}:`, e);
+      logError("useEditLock", "acquire lock", e, {
+        redisKey,
+        sessionId: sessionId.value,
+        userName: userName.value,
+      });
       return null;
     }
   }
@@ -47,7 +52,7 @@ export function useEditLock() {
       await sendInstantCommand("DEL", lockKey);
       console.log(`[useEditLock] Lock released successfully for: ${redisKey}`);
     } catch (e) {
-      console.error(`[useEditLock] Failed to release lock for ${redisKey}:`, e);
+      logError("useEditLock", "release lock", e, { redisKey });
     } finally {
       stopRefresh(redisKey);
     }
@@ -78,7 +83,7 @@ export function useEditLock() {
       console.log(`[useEditLock] Lock is held by another user: ${parsed.userName}`);
       return parsed;
     } catch (e) {
-      console.error(`[useEditLock] Failed to check lock for ${redisKey}:`, e);
+      logError("useEditLock", "check lock", e, { redisKey });
       return null;
     }
   }
@@ -96,7 +101,7 @@ export function useEditLock() {
         };
         await sendInstantCommand("SET", getLockKey(redisKey), [JSON.stringify(lock), "EX", "300"]);
       } catch (e) {
-        console.error("Failed to refresh lock", e);
+        logError("useEditLock", "refresh lock", e, { redisKey });
         stopRefresh(redisKey);
       }
     }, LOCK_REFRESH_INTERVAL_MS);
@@ -161,7 +166,7 @@ export function useEditLock() {
           callback(null);
         }
       } catch (error) {
-        console.error(`[useEditLock] Error parsing lock data for ${redisKey}:`, error);
+        logError("useEditLock", "parse lock data in observer", error, { redisKey });
         callback(null);
       }
     });

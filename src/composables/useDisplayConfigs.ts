@@ -10,6 +10,7 @@ import {
 import { withVersion, updateVersion } from "@/types/Versioned";
 import { useSessionId } from "./useSessionId";
 import { getDisplayConfigKey, getDisplayConfigListKey } from "@/utils/redisKeyUtils";
+import { logError, createUserErrorMessage } from "@/utils/errorUtils";
 
 // Local reactive state for all display configurations
 const displayConfigs = ref<ClockDisplayConfig[]>([]);
@@ -55,9 +56,10 @@ export function useDisplayConfigs() {
 
       displayConfigs.value = loaded;
     } catch (e) {
-      console.error(e);
+      logError("useDisplayConfigs", "load display configurations", e);
       error.value = "Failed to load display configurations";
-      emitToast({ title: error.value, type: "error", deliverTo: "all" });
+      const errorMsg = createUserErrorMessage("load display configurations", undefined, e);
+      emitToast({ ...errorMsg, type: "error", deliverTo: "all" });
     } finally {
       isLoading.value = false;
     }
@@ -100,8 +102,9 @@ export function useDisplayConfigs() {
       emitToast({ title: `Display "${config.name}" created`, type: "success", deliverTo: "all" });
       return true;
     } catch (e) {
-      console.error(e);
-      emitToast({ title: "Failed to create display configuration", type: "error", deliverTo: "all" });
+      logError("useDisplayConfigs", "create display configuration", e, { configId: config.id });
+      const errorMsg = createUserErrorMessage("create display configuration", config.id, e);
+      emitToast({ ...errorMsg, type: "error", deliverTo: "all" });
       return false;
     }
   }
@@ -123,8 +126,9 @@ export function useDisplayConfigs() {
       emitToast({ title: `Display "${config.name}" updated`, type: "success", deliverTo: "all" });
       return true;
     } catch (e) {
-      console.error(e);
-      emitToast({ title: "Failed to update display configuration", type: "error", deliverTo: "all" });
+      logError("useDisplayConfigs", "update display configuration", e, { configId: config.id });
+      const errorMsg = createUserErrorMessage("update display configuration", config.id, e);
+      emitToast({ ...errorMsg, type: "error", deliverTo: "all" });
       return false;
     }
   }
@@ -153,8 +157,12 @@ export function useDisplayConfigs() {
       emitToast({ title: `Display "${config.name}" updated`, type: "success", deliverTo: "all" });
       return { success: true };
     } catch (e) {
-      console.error(e);
-      emitToast({ title: "Failed to update display configuration", type: "error", deliverTo: "all" });
+      logError("useDisplayConfigs", "update display configuration with version", e, {
+        configId: config.id,
+        originalLastModifiedAt,
+      });
+      const errorMsg = createUserErrorMessage("update display configuration", config.id, e);
+      emitToast({ ...errorMsg, type: "error", deliverTo: "all" });
       return { success: false };
     }
   }
@@ -168,8 +176,9 @@ export function useDisplayConfigs() {
       emitToast({ title: "Display configuration deleted", type: "success", deliverTo: "all" });
       return true;
     } catch (e) {
-      console.error(e);
-      emitToast({ title: "Failed to delete display configuration", type: "error", deliverTo: "all" });
+      logError("useDisplayConfigs", "delete display configuration", e, { configId: id });
+      const errorMsg = createUserErrorMessage("delete display configuration", id, e);
+      emitToast({ ...errorMsg, type: "error", deliverTo: "all" });
       return false;
     }
   }
