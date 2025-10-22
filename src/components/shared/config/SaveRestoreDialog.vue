@@ -50,7 +50,7 @@ interface Props {
   isProcessing?: boolean;
 
   // For getting available variants
-  filePattern: string;
+  filePattern: RegExp;
 }
 
 const props = withDefaults(defineProps<Props>(), {

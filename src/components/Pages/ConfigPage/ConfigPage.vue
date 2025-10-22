@@ -16,20 +16,20 @@ const currentPageDescription = computed(() => {
 </script>
 
 <template>
-  <div class="flex w-full">
+  <div class="flex w-full" style="height: calc(100vh - 3.5rem)">
     <SidebarProvider :default-open="true">
       <ConfigSidebar />
       <div
-        class="flex-1 ml-0 transition-[margin-left] ease-linear group-data-[collapsible=offcanvas]:ml-0 group-data-[collapsible=icon]:ml-[--sidebar-width-icon] group-data-[collapsible=sidebar]:ml-[--sidebar-width]"
+        class="flex-1 ml-0 transition-[margin-left] ease-linear group-data-[collapsible=offcanvas]:ml-0 group-data-[collapsible=icon]:ml-[--sidebar-width-icon] group-data-[collapsible=sidebar]:ml-[--sidebar-width] flex flex-col"
       >
-        <div class="sticky flex items-center px-6 gap-4 inset-shadow-2xl">
+        <div class="sticky flex items-center px-6 gap-4 inset-shadow-2xl flex-none">
           <SidebarTrigger size="2xl" />
           <div class="flex flex-col py-4 gap-2">
             <h1 class="text-3xl font-bold">{{ currentPageTitle }}</h1>
             <p class="text-sm text-muted-foreground">{{ currentPageDescription }}</p>
           </div>
         </div>
-        <div class="p-6">
+        <div class="flex-1 p-6 overflow-hidden">
           <RouterView />
         </div>
       </div>

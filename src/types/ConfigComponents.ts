@@ -85,8 +85,8 @@ export interface SkeletonColumn {
  * Configuration for save/restore operations
  */
 export interface SaveRestoreConfig {
-  /** File pattern for filtering Redis keys */
-  filePattern: string;
+  /** File pattern for filtering Redis keys (RegExp) */
+  filePattern: RegExp;
 
   /** Function to get keys for save operation */
   getKeysForSave: () => string[];
