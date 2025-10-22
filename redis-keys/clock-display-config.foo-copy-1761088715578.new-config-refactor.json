@@ -1,0 +1,41 @@
+{
+  "key": "clock-display-config:foo-copy-1761088715578",
+  "type": "string",
+  "data": {
+    "id": "foo-copy-1761088715578",
+    "name": "Foo (Copy)",
+    "description": "Foof",
+    "type": "clock-layout",
+    "containerClasses": "flex flex-col w-full gap-8 justify-center items-center",
+    "rows": [
+      {
+        "clocks": [
+          {
+            "labelLeft": "T",
+            "size": "2xl",
+            "format": "HHMMSS",
+            "timeType": "timespan"
+          }
+        ],
+        "gap": 8,
+        "justify": "center",
+        "align": "center",
+        "rowClasses": ""
+      },
+      {
+        "clocks": [
+          {
+            "labelLeft": "L",
+            "size": "2xl",
+            "format": "HHMMSS",
+            "timeType": "timespan"
+          }
+        ],
+        "gap": 8,
+        "justify": "center",
+        "align": "center",
+        "rowClasses": ""
+      }
+    ]
+  }
+}
