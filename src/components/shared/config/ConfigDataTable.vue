@@ -133,7 +133,7 @@ const { elementRef: tableHeaderRef, height: tableHeaderHeight } = useElementHeig
         <!-- Table content -->
         <div v-else class="relative w-full flex-1 min-h-0 flex flex-col">
           <!-- Sticky header outside of ScrollArea -->
-          <div v-if="columns.length > 0" class="border-b">
+          <div v-if="columns.length > 0" class="border-b flex-shrink-0">
             <Table>
               <TableHeader ref="tableHeaderRef">
                 <TableRow class="table-header-row relative">
@@ -150,13 +150,15 @@ const { elementRef: tableHeaderRef, height: tableHeaderHeight } = useElementHeig
           </div>
 
           <!-- Scrollable table body -->
-          <div class="flex-1 min-h-0 h-full overflow-y-auto">
-            <Table class="">
-              <TableBody>
-                <slot name="tablebody" />
-              </TableBody>
-            </Table>
-          </div>
+          <ScrollArea as-child type="always" class="flex-1 min-h-0 overflow-hidden">
+            <div class="h-full">
+              <Table class="w-full">
+                <TableBody>
+                  <slot name="tablebody" />
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
         </div>
 
         <!-- Optional footer -->
