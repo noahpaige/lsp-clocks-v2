@@ -2,6 +2,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import ConfigEmptyState from "./ConfigEmptyState.vue";
 import { useElementHeight } from "@/composables/useElementHeight";
 import { computed } from "vue";
@@ -130,26 +131,32 @@ const { elementRef: tableHeaderRef, height: tableHeaderHeight } = useElementHeig
         </slot>
 
         <!-- Table content -->
-        <div v-else class="relative w-full overflow-y-auto flex-1 min-h-0">
-          <table class="w-full caption-bottom text-sm">
-            <!-- Table header (built by ConfigDataTable) - sticky positioned -->
-            <TableHeader ref="tableHeaderRef" v-if="columns.length > 0" class="sticky top-0 z-10 bg-background">
-              <TableRow class="table-header-row relative">
-                <TableHead
-                  v-for="column in columns"
-                  :key="column.key"
-                  :class="[column.width, `text-${column.align || 'left'}`, 'bg-background']"
-                >
-                  {{ column.label }}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
+        <div v-else class="relative w-full flex-1 min-h-0 flex flex-col">
+          <!-- Sticky header outside of ScrollArea -->
+          <div v-if="columns.length > 0" class="border-b">
+            <Table>
+              <TableHeader ref="tableHeaderRef">
+                <TableRow class="table-header-row relative">
+                  <TableHead
+                    v-for="column in columns"
+                    :key="column.key"
+                    :class="[column.width, `text-${column.align || 'left'}`, 'bg-background']"
+                  >
+                    {{ column.label }}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+            </Table>
+          </div>
 
-            <!-- Table body (provided by user via slot) -->
-            <TableBody>
-              <slot name="tablebody" />
-            </TableBody>
-          </table>
+          <!-- Scrollable table body -->
+          <div class="flex-1 min-h-0 h-full overflow-y-auto">
+            <Table class="">
+              <TableBody>
+                <slot name="tablebody" />
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         <!-- Optional footer -->
@@ -158,17 +165,3 @@ const { elementRef: tableHeaderRef, height: tableHeaderHeight } = useElementHeig
     </Card>
   </div>
 </template>
-
-<style scoped>
-/* Add :after element to TableRow inside TableHeader */
-:deep(.table-header-row)::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background-color: hsl(var(--border));
-  z-index: 1;
-}
-</style>
